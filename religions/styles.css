@@ -39,8 +39,11 @@ button:hover,.home-link:hover{background:#223047} button:focus-visible,.home-lin
 #nodeInfo .close,#helpPanel .close{position:absolute;top:8px;right:8px;border:1px solid #344052;background:#192231;color:var(--text);border-radius:8px;padding:3px 8px;cursor:pointer}
 #nodeInfo .close:hover,#helpPanel .close:hover{background:#223047}
 
-.axis-label{fill:#8997aa;font-size:12px}
-.group-label{fill:#b8c3d3;font-size:15px;font-weight:650}
+#axisLabels{pointer-events:none}
+.axis-background{fill:#0a0d13;fill-opacity:.94}
+.axis-label{fill:#c5ceda;font-size:13px;font-weight:600}
+.group-label{fill:#e9edf5;font-size:14px;font-weight:650;paint-order:stroke;stroke:#0a0d13;stroke-width:4px;stroke-linejoin:round}
+.axis-tick{stroke:#8997aa;stroke-width:1}
 .gridline{stroke:var(--grid);stroke-width:1}
 .group-line{stroke:#202836;stroke-width:1}
 .edge{fill:none;stroke-width:1.4;opacity:.24;transition:opacity .16s ease}
@@ -63,7 +66,7 @@ button:hover,.home-link:hover{background:#223047} button:focus-visible,.home-lin
 .node.connection-neighbor rect:not(.selection-ring){stroke:var(--related-glow);stroke-width:3;vector-effect:non-scaling-stroke}
 .node.selected{opacity:1}
 
-.node,.node *{-webkit-user-select:none;user-select:none}
+#stage,#stage *{-webkit-user-select:none;user-select:none}
 .node{cursor:pointer}
 .node rect{stroke:#536174;stroke-width:1}
 .node rect.selection-ring{fill:none!important;stroke:transparent;stroke-width:0;pointer-events:none;vector-effect:non-scaling-stroke}

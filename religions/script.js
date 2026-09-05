@@ -93,6 +93,8 @@ groups.forEach(group=>{
 const svg = document.getElementById('stage');
 const viewport = document.getElementById('viewport');
 const gridG = document.getElementById('grid');
+const axisLabelsG = document.getElementById('axisLabels');
+const dateLabels=[], branchLabels=[];
 const edgesG = document.getElementById('edges');
 const nodesG = document.getElementById('nodes');
 const selectedEdgesOverlay = document.getElementById('selectedEdgesOverlay');
@@ -126,16 +128,69 @@ function renderGrid() {
   groups.forEach(g=>{
     const y=groupY[g]-28;
     addSVG('line',{x1:0,y1:y,x2:worldW,y2:y,class:'group-line'},gridG);
-    const t=addSVG('text',{x:10,y:y+20,class:'group-label'},gridG); t.textContent=g;
+    const t=addSVG('text',{x:12,class:'group-label'},axisLabelsG); t.textContent=g;
+    branchLabels.push({element:t,y});
   });
   for(let y=-3500;y<=2000;y+=500){
     const x=xFor(y);
     addSVG('line',{x1:x,y1:0,x2:x,y2:worldH,class:'gridline'},gridG);
-    const t=addSVG('text',{x:x+5,y:18,class:'axis-label'},gridG); t.textContent=fmtYear(y);
   }
   const nowX=xFor(2026);
   addSVG('line',{x1:nowX,y1:0,x2:nowX,y2:worldH,stroke:'#6f7f94','stroke-width':1.2,'stroke-dasharray':'3 4'},gridG);
-  const nowT=addSVG('text',{x:nowX-6,y:18,class:'axis-label','text-anchor':'end'},gridG); nowT.textContent='2026';
+  const addDate=year=>{
+    const label=addSVG('g',{},axisLabelsG);
+    const text=addSVG('text',{y:20,class:'axis-label','text-anchor':'middle'},label);
+    text.textContent=year===maxYear?String(year):fmtYear(year);
+    const tick=addSVG('line',{y1:26,y2:30,class:'axis-tick'},label);
+    dateLabels.push({element:label,text,tick,year});
+  };
+  for(let year=minYear;year<=2000;year+=50)addDate(year);
+  addDate(maxYear);
+}
+function updateAxisLabels(size){
+  axisLabelsG.querySelector('.axis-background').setAttribute('width',size.width);
+  const pixelsPerYear=(worldW-left-right)/(maxYear-minYear)*scale;
+  const interval=[50,100,200,500,1000,2000].find(step=>step*pixelsPerYear>=90)||2000;
+  const placeDate=label=>{
+    const x=tx+xFor(label.year)*scale;
+    const visible=x>=0&&x<=size.width&&(label.year===maxYear||label.year%interval===0);
+    label.element.style.display=visible?'':'none';
+    if(!visible)return null;
+    const width=label.text.getComputedTextLength();
+    const center=Math.max(width/2+8,Math.min(size.width-width/2-8,x));
+    label.text.setAttribute('x',center);
+    label.tick.setAttribute('x1',x);label.tick.setAttribute('x2',x);
+    return {left:center-width/2,right:center+width/2};
+  };
+  // Keep the present-day label when it is close to the last regular date.
+  const present=placeDate(dateLabels[dateLabels.length-1]);
+  let lastRight=-Infinity;
+  dateLabels.slice(0,-1).forEach(label=>{
+    const box=placeDate(label);
+    if(!box)return;
+    if(box.left<lastRight+14||(present&&box.right+14>present.left))label.element.style.display='none';
+    else lastRight=box.right;
+  });
+  const visibleBranches=[];
+  let lastBaseline=28;
+  branchLabels.forEach((label,index)=>{
+    const top=ty+label.y*scale;
+    const bottom=ty+(branchLabels[index+1]?.y??worldH)*scale;
+    const baseline=Math.max(48,top-6);
+    const visible=bottom>54&&baseline<size.height-8;
+    label.element.style.display=visible?'':'none';
+    if(visible){
+      lastBaseline=Math.max(baseline,lastBaseline+20);
+      visibleBranches.push({element:label.element,baseline:lastBaseline});
+    }
+  });
+  // Keep small adjacent branches named in the full view on narrow screens.
+  let nextBaseline=size.height+12;
+  visibleBranches.reverse().forEach(label=>{
+    label.baseline=Math.min(label.baseline,nextBaseline-20);
+    label.element.setAttribute('y',label.baseline);
+    nextBaseline=label.baseline;
+  });
 }
 function edgePath(a,b,index) {
   const ac={x:xFor(a.year),y:yFor(a)+nodeH/2};
@@ -341,12 +396,9 @@ function getFitScale(bounds,size){
 function constrainView(view,bounds,size){
   const scale=Math.min(maximumScale,Math.max(getFitScale(bounds,size),view.scale));
   const constrainAxis=(offset,start,length,available)=>{
-    // Center an axis that fits. Otherwise, stop at either diagram edge.
-    if(length*scale<=available-2*viewPadding){
-      return (available-length*scale)/2-start*scale;
-    }
-    const minimum=available-viewPadding-(start+length)*scale;
-    const maximum=viewPadding-start*scale;
+    // Either diagram edge can reach the screen center, but cannot pass it.
+    const minimum=available/2-(start+length)*scale;
+    const maximum=available/2-start*scale;
     return Math.min(maximum,Math.max(minimum,offset));
   };
   return {scale,tx:constrainAxis(view.tx,bounds.x,bounds.width,size.width),
@@ -370,6 +422,7 @@ function applyTransform(){
   ({scale,tx,ty}=constrainView({scale,tx,ty},timelineBounds,size));
   previousViewSize={width:size.width,height:size.height};
   viewport.setAttribute('transform',`translate(${tx} ${ty}) scale(${scale})`);
+  updateAxisLabels(size);
   const arrow=document.getElementById('arrow-selected');
   arrow.setAttribute('markerWidth',10/scale);
   arrow.setAttribute('markerHeight',8/scale);
@@ -420,6 +473,7 @@ function openNode(id){
 let dragging=false,lastX=0,lastY=0;
 let backgroundTap=null;
 const activePointers=new Map();
+svg.addEventListener('selectstart',event=>event.preventDefault());
 let pinchStartDistance=0,pinchStartScale=1,pinchWorldX=0,pinchWorldY=0;
 function pointerDistance() {
   const [a,b]=[...activePointers.values()];
@@ -617,12 +671,18 @@ function resizeView(){
   const size=viewSize();
   if(!size.width||!size.height)return;
   if(previousViewSize&&size.width===previousViewSize.width&&size.height===previousViewSize.height)return;
-  if(!previousViewSize||Math.abs(scale-getFitScale(timelineBounds,previousViewSize))<0.000001){
+  const wasOverview=previousViewSize&&Math.abs(scale-getFitScale(timelineBounds,previousViewSize))<0.000001&&
+    Math.abs(tx+(timelineBounds.x+timelineBounds.width/2)*scale-previousViewSize.width/2)<0.01&&
+    Math.abs(ty+(timelineBounds.y+timelineBounds.height/2)*scale-previousViewSize.height/2)<0.01;
+  if(!previousViewSize||wasOverview){
     fitAll();
   }else{
     // Keep the same center when zoomed in, then apply the new edge limits.
-    tx+=(size.width-previousViewSize.width)/2;
-    ty+=(size.height-previousViewSize.height)/2;
+    const centerX=(previousViewSize.width/2-tx)/scale;
+    const centerY=(previousViewSize.height/2-ty)/scale;
+    scale=Math.max(scale,getFitScale(timelineBounds,size));
+    tx=size.width/2-centerX*scale;
+    ty=size.height/2-centerY*scale;
     applyTransform();
   }
 }

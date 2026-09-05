@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Interactive Timeline & Family Tree of Religions and Sacred Texts</title>
-<link rel="stylesheet" href="styles.css?v=20">
+<link rel="stylesheet" href="styles.css?v=22">
 </head>
 <body>
 <header class="controls" aria-label="Timeline and diagram controls">
@@ -56,6 +56,9 @@
         <g id="edges"></g>
         <g id="nodes"></g>
         <g id="selectedEdgesOverlay" aria-hidden="true"></g>
+      </g>
+      <g id="axisLabels">
+        <rect class="axis-background" x="0" y="0" height="30"/>
       </g>
     </svg>
       <div id="nodeInfo" class="hidden" aria-live="polite">
@@ -111,6 +114,6 @@
 </template>
 
 <script src="history.js?v=1"></script>
-<script src="script.js?v=22"></script>
+<script src="script.js?v=25"></script>
 </body>
 </html>
