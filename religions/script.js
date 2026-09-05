@@ -64,7 +64,8 @@ edges.push({source:'koreabuddh',target:'japanbuddh',type:'lineage',label:'offici
 reviseEdge('protbible','rastafari',{source:'baptist',label:'Afro-Jamaican Christian and biblical milieu, including Native Baptist and Revival traditions'});
 
 const groups = ["Ancient & oral", "Iranian", "Jewish", "Christian", "Islamic", "Bábí & Bahá’í", "South Asian", "Chinese & East Asian", "Other / modern"];
-const rowGap=58, nodeW=174, nodeH=42, groupGap=92;
+// Larger cards keep names readable across several centuries at once.
+const rowGap=108, nodeW=360, nodeH=84, groupGap=108;
 const minYear=-3500, maxYear=2026, worldW=9200, left=180, right=120;
 const minimumYearGap=(nodeW+18)*(maxYear-minYear)/(worldW-left-right);
 const layoutRows=new Map();
@@ -75,7 +76,7 @@ groups.forEach(group=>{
   nodes.filter(node=>node.group===group).sort((a,b)=>a.year-b.year).forEach(node=>{
     const preferred=node.row||0;
     const candidates=[preferred];
-    for(let distance=1;distance<12;distance++){
+    for(let distance=1;distance<=nodes.length;distance++){
       candidates.push(preferred+distance);
       if(preferred-distance>=0)candidates.push(preferred-distance);
     }
@@ -163,17 +164,25 @@ function renderEdges() {
 function renderNodes() {
   nodes.forEach(n=>{
     const g=addSVG('g',{class:`node ${n.type}`,transform:`translate(${xFor(n.year)-nodeW/2},${yFor(n)})`,tabindex:'0',role:'button','aria-label':`${n.name}, ${n.date}`,'data-id':n.id},nodesG);
-    addSVG('rect',{x:0,y:0,width:nodeW,height:nodeH,rx:8,ry:8},g);
-    addSVG('rect',{x:-3,y:-3,width:nodeW+6,height:nodeH+6,rx:11,ry:11,class:'selection-ring','aria-hidden':'true'},g);
-    let label=n.name;
-    if(label.length>26) label=label.slice(0,25)+'…';
-    const t=addSVG('text',{x:9,y:17},g); t.textContent=label;
-    const d=addSVG('text',{x:9,y:33,class:'date'},g); d.textContent=n.date.length>28 ? fmtYear(n.year) : n.date;
+    addSVG('rect',{x:0,y:0,width:nodeW,height:nodeH,rx:10,ry:10},g);
+    addSVG('rect',{x:-3,y:-3,width:nodeW+6,height:nodeH+6,rx:13,ry:13,class:'selection-ring','aria-hidden':'true'},g);
+    const t=addSVG('text',{x:14,y:34},g);
+    fitLabel(t,n.name,nodeW-40);
+    const d=addSVG('text',{x:14,y:64,class:'date'},g);
+    d.textContent=n.date;
+    if(d.getComputedTextLength()>nodeW-40)d.textContent=fmtYear(n.year);
     const title=addSVG('title',{},g); title.textContent=n.name+' — '+n.date;
     g.addEventListener('pointerdown',event=>event.stopPropagation());
     g.addEventListener('click',()=>selectNode(n.id));
     g.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();selectNode(n.id);}});
   });
+}
+function fitLabel(element,label,width){
+  element.textContent=label;
+  if(element.getComputedTextLength()<=width)return;
+  let end=label.length;
+  do{element.textContent=label.slice(0,--end).trimEnd()+'…';}
+  while(end>0&&element.getComputedTextLength()>width);
 }
 let selectedId=null;
 function relationText(e,n) {

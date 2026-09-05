@@ -69,8 +69,8 @@ button:hover,.home-link:hover{background:#223047} button:focus-visible,.home-lin
 .node{cursor:pointer}
 .node rect{stroke:#536174;stroke-width:1}
 .node rect.selection-ring{fill:none!important;stroke:transparent;stroke-width:0;pointer-events:none;vector-effect:non-scaling-stroke}
-.node text{pointer-events:none;fill:#f4f7fb;font-size:12px}
-.node .date{fill:#aeb9c9;font-size:10px}
+.node text{pointer-events:none;fill:#f4f7fb;font-size:28px}
+.node .date{fill:#b9c5d6;font-size:21px}
 .node.tradition rect{fill:var(--trad)}
 .node.text rect{fill:var(--textnode)}
 .node.movement rect{fill:var(--movement)}
