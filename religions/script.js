@@ -314,8 +314,8 @@ function renderNodes() {
     const d=addSVG('text',{x:14,y:64,class:'date'},g);
     fitLabel(d,n.shortDate||n.date,nodeW-40);
     const title=addSVG('title',{},g); title.textContent=n.name+' — '+n.date;
-    g.addEventListener('pointerdown',event=>event.stopPropagation());
-    g.addEventListener('click',()=>selectNode(n.id));
+    // Pointer taps select on release. Keep click support for assistive tools.
+    g.addEventListener('click',event=>{if(event.detail===0)selectNode(n.id);});
     g.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();selectNode(n.id);}});
   });
 }
@@ -533,7 +533,7 @@ function openNode(id){
   closeInfo.focus({preventScroll:true});
 }
 let dragging=false,lastX=0,lastY=0;
-let backgroundTap=null;
+let tapCandidate=null;
 const activePointers=new Map();
 svg.addEventListener('selectstart',event=>event.preventDefault());
 branchAxis.addEventListener('selectstart',event=>event.preventDefault());
@@ -556,21 +556,24 @@ function beginPinch() {
   dragging=false;
 }
 svg.addEventListener('pointerdown',e=>{
-  if(e.button!==0||e.target.closest?.('.node'))return;
+  if(e.button!==0)return;
   activePointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(activePointers.size===1){
-    backgroundTap=e.target.closest?.('.edge')?null:{id:e.pointerId,x:e.clientX,y:e.clientY};
-  }else backgroundTap=null;
+    const node=e.target.closest?.('.node');
+    tapCandidate={id:e.pointerId,x:e.clientX,y:e.clientY,threshold:e.pointerType==='touch'?10:6,
+      nodeId:node?.dataset.id,clear:!node&&!e.target.closest?.('.edge')};
+    dragging=false;lastX=e.clientX;lastY=e.clientY;
+  }else{
+    tapCandidate=null;
+    beginPinch();
+    svg.classList.add('dragging');
+  }
   try{svg.setPointerCapture(e.pointerId)}catch{}
-  if(activePointers.size===1){
-    dragging=true; lastX=e.clientX; lastY=e.clientY; svg.classList.add('dragging');
-  } else if(activePointers.size===2) beginPinch();
 });
 svg.addEventListener('pointermove',e=>{
   if(!activePointers.has(e.pointerId))return;
-  if(backgroundTap&&Math.hypot(e.clientX-backgroundTap.x,e.clientY-backgroundTap.y)>6)backgroundTap=null;
   activePointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
-  if(activePointers.size===2){
+  if(activePointers.size>=2){
     const rect=svg.getBoundingClientRect();
     const midpoint=pointerMidpoint();
     scale=boundedScale(pinchStartScale*pointerDistance()/pinchStartDistance,rect);
@@ -579,26 +582,35 @@ svg.addEventListener('pointermove',e=>{
     applyTransform();
     return;
   }
-  if(!dragging)return;
+  if(!dragging){
+    if(!tapCandidate||Math.hypot(e.clientX-tapCandidate.x,e.clientY-tapCandidate.y)<=tapCandidate.threshold)return;
+    tapCandidate=null;
+    dragging=true;svg.classList.add('dragging');
+  }
   tx+=e.clientX-lastX; ty+=e.clientY-lastY;
   lastX=e.clientX; lastY=e.clientY; applyTransform();
 });
 function endPointer(e){
-  const clearOnTap=e.type==='pointerup'&&backgroundTap?.id===e.pointerId&&
-    Math.hypot(e.clientX-backgroundTap.x,e.clientY-backgroundTap.y)<=6;
-  backgroundTap=null;
+  if(!activePointers.has(e.pointerId))return;
+  const tap=e.type==='pointerup'&&tapCandidate?.id===e.pointerId&&
+    Math.hypot(e.clientX-tapCandidate.x,e.clientY-tapCandidate.y)<=tapCandidate.threshold?tapCandidate:null;
+  tapCandidate=null;
   activePointers.delete(e.pointerId);
   try{svg.releasePointerCapture(e.pointerId)}catch{}
-  if(activePointers.size===1){
+  if(activePointers.size>=2){
+    beginPinch();
+  }else if(activePointers.size===1){
     const remaining=[...activePointers.values()][0];
-    lastX=remaining.x; lastY=remaining.y; dragging=true;
+    lastX=remaining.x; lastY=remaining.y; dragging=true;svg.classList.add('dragging');
   } else if(activePointers.size===0){
     dragging=false; svg.classList.remove('dragging');
   }
-  if(clearOnTap){closeHelp();clearSelection();updateFilters();}
+  if(tap?.nodeId)selectNode(tap.nodeId);
+  else if(tap?.clear){closeHelp();clearSelection();updateFilters();}
 }
 svg.addEventListener('pointerup',endPointer);
 svg.addEventListener('pointercancel',endPointer);
+svg.addEventListener('lostpointercapture',e=>{if(e.target===svg)endPointer(e);});
 svg.addEventListener('wheel',e=>{
   e.preventDefault();
   const r=svg.getBoundingClientRect(), mx=e.clientX-r.left,my=e.clientY-r.top;
