@@ -116,7 +116,8 @@ const helpTitle = document.getElementById('helpTitle');
 const closeHelpButton = document.getElementById('closeHelp');
 let helpTrigger=null;
 const search = document.getElementById('search');
-const groupFilter = document.getElementById('groupFilter');
+const mobileView=window.matchMedia('(hover: none) and (pointer: coarse)');
+const landscapeView=window.matchMedia('(orientation: landscape)');
 const worldH=nextGroupY+40;
 const map = new Map(nodes.map(n=>[n.id,n]));
 function xFor(y) { return left + ((y-minYear)/(maxYear-minYear))*(worldW-left-right); }
@@ -393,7 +394,7 @@ function closeHelp(restoreFocus=false){
   if(helpPanel.hidden)return;
   helpPanel.hidden=true;
   helpTrigger?.setAttribute('aria-pressed','false');
-  if(selectedId)nodeInfo.classList.remove('hidden');
+  if(selectedId&&!mobileView.matches)nodeInfo.classList.remove('hidden');
   if(restoreFocus)helpTrigger?.focus({preventScroll:true});
   helpTrigger=null;
 }
@@ -454,7 +455,7 @@ function selectNode(id) {
   const n=map.get(id); if(!n)return;
   closeHelp();
   selectedId=id;
-  nodeInfo.classList.remove('hidden');
+  nodeInfo.classList.toggle('hidden',mobileView.matches);
   updateFilters();
   nodeInfo.scrollTop=0;
 }
@@ -507,8 +508,7 @@ function fitAll(){
 }
 function matchingNodes(){
   const q=search.value.trim().toLowerCase();
-  return nodes.filter(n=>(groupFilter.value==='all'||n.group===groupFilter.value)&&
-    (!q||`${n.name} ${n.desc} ${n.date} ${n.group}`.toLowerCase().includes(q)));
+  return nodes.filter(n=>!q||`${n.name} ${n.desc} ${n.date} ${n.group}`.toLowerCase().includes(q));
 }
 function fitNodes(items, reserveDetails=false){
   if(!items.length||listView.classList.contains('active'))return;
@@ -528,9 +528,10 @@ function openNode(id){
   setListView(false);
   document.getElementById('searchResults').hidden=true;
   selectNode(id);
-  fitNodes([map.get(id)],true);
+  fitNodes([map.get(id)],!mobileView.matches);
   diagramArea.scrollIntoView({block:'nearest'});
-  closeInfo.focus({preventScroll:true});
+  if(mobileView.matches)document.querySelector(`.node[data-id="${id}"]`)?.focus({preventScroll:true});
+  else closeInfo.focus({preventScroll:true});
 }
 let dragging=false,lastX=0,lastY=0;
 let tapCandidate=null;
@@ -621,25 +622,13 @@ svg.addEventListener('wheel',e=>{
 },{passive:false});
 function updateFilters(){
   const q=search.value.trim().toLowerCase();
-  const gf=groupFilter.value;
   document.querySelectorAll('.node').forEach(el=>{
     const n=map.get(el.dataset.id);
-    const groupOK=gf==='all'||n.group===gf;
-    el.classList.toggle('hidden',!groupOK);
     const text=(n.name+' '+n.desc+' '+n.date+' '+n.group).toLowerCase();
     const match=!q||text.includes(q);
-    el.classList.toggle('dim',groupOK&&!match);
+    el.classList.toggle('dim',!match);
   });
-  document.querySelectorAll('.edge').forEach((el,i)=>{
-    const e=edges[i], a=map.get(e.source),b=map.get(e.target);
-    const groupOK=gf==='all'||(a.group===gf&&b.group===gf);
-    el.classList.toggle('hidden',!groupOK);
-  });
-  if(selectedId){
-    const selectedNode=map.get(selectedId);
-    if(gf!=='all'&&selectedNode.group!==gf) clearSelection(true);
-    else applySelectionFocus();
-  }
+  if(selectedId)applySelectionFocus();
   if(selectedId&&!nodeInfo.classList.contains('hidden'))renderNodeInfo(map.get(selectedId));
   renderSelectedEdgeOverlay();
   const matches=matchingNodes(), ids=new Set(matches.map(n=>n.id));
@@ -650,7 +639,7 @@ function updateFilters(){
   results.replaceChildren();
   if(q){
     const count=document.createElement('p');
-    count.textContent=matches.length?`${matches.length} results. Select a name to open it.`:'No results. Try another keyword or branch.';
+    count.textContent=matches.length?`${matches.length} results. Select a name to open it.`:'No results. Try another keyword.';
     results.appendChild(count);
     matches.forEach(n=>{
       const button=document.createElement('button');
@@ -661,8 +650,7 @@ function updateFilters(){
     });
   }
 }
-[search,groupFilter].forEach(el=>el.addEventListener('input',updateFilters));
-groupFilter.addEventListener('change',()=>fitNodes(matchingNodes()));
+search.addEventListener('input',updateFilters);
 search.addEventListener('focus',updateFilters);
 search.addEventListener('keydown',e=>{
   if(e.key==='Enter'){
@@ -745,4 +733,19 @@ function resizeView(){
 const viewObserver=new ResizeObserver(resizeView);
 viewObserver.observe(svg);
 viewObserver.observe(nodeInfo);
+function syncMobileMode(){
+  if(mobileView.matches&&landscapeView.matches){
+    const focused=document.activeElement;
+    if(document.querySelector('.controls').contains(focused)||helpPanel.contains(focused))focused.blur();
+    setListView(false);
+    document.getElementById('searchResults').hidden=true;
+  }
+  const showDetails=!!selectedId&&!mobileView.matches&&helpPanel.hidden;
+  nodeInfo.classList.toggle('hidden',!showDetails);
+  if(showDetails)renderNodeInfo(map.get(selectedId));
+  requestAnimationFrame(resizeView);
+}
+mobileView.addEventListener('change',syncMobileMode);
+landscapeView.addEventListener('change',syncMobileMode);
+syncMobileMode();
 })();

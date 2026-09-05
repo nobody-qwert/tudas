@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Interactive Timeline & Family Tree of Religions and Sacred Texts</title>
-<link rel="stylesheet" href="styles.css?v=30">
+<link rel="stylesheet" href="styles.css?v=33">
 </head>
 <body>
 <header class="controls" aria-label="Timeline and diagram controls">
@@ -14,12 +14,6 @@
     <input id="search" type="search" placeholder="Search names or texts…" aria-controls="searchResults" autocomplete="off">
     <div id="searchResults" hidden aria-label="Search results"></div>
   </div>
-  <label class="branch-control"><span class="sr-only">Tradition / region</span>
-    <select id="groupFilter">
-      <option value="all">All branches</option>
-      <option>Ancient & oral</option><option>Iranian</option><option>Jewish</option><option>Christian</option><option>Islamic</option><option>Bábí & Bahá’í</option><option>South Asian</option><option>Chinese & East Asian</option><option>Other / modern</option>
-    </select>
-  </label>
   <button id="toggleList" type="button" aria-pressed="false" aria-controls="listView">List view</button>
 </header>
 
@@ -53,7 +47,7 @@
 </div>
 
 <div id="listView">
-  <p id="listEmpty" hidden>No results. Try another search or choose All branches.</p>
+  <p id="listEmpty" hidden>No results. Try another search.</p>
   <table>
     <thead><tr><th>Date</th><th>Name</th><th>Branch</th><th>Type</th><th>Notes</th></tr></thead>
     <tbody id="listBody"></tbody>
@@ -98,6 +92,6 @@
 </template>
 
 <script src="history.js?v=1"></script>
-<script src="script.js?v=33"></script>
+<script src="script.js?v=35"></script>
 </body>
 </html>

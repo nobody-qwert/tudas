@@ -97,3 +97,13 @@ test('All relationship types stay enabled and the required scripts load in order
   assert.doesNotMatch(html, /connection-options/);
   assert.ok(html.indexOf('src="history.js') < html.indexOf('src="script.js'));
 });
+
+test('All branches stay available without a branch selector', () => {
+  const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+  const styles = fs.readFileSync(path.join(root, 'styles.css'), 'utf8');
+  assert.doesNotMatch(html, /groupFilter|branch-control|choose All branches/);
+  assert.doesNotMatch(script, /groupFilter|groupOK/);
+  assert.doesNotMatch(styles, /branch-control/);
+  assert.equal(new Set(nodes.map(node => node.group)).size, 9);
+  assert.ok(script.includes("search.addEventListener('input',updateFilters)"));
+});
