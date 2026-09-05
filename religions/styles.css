@@ -45,7 +45,7 @@ button:hover,.home-link:hover{background:#223047} button:focus-visible,.home-lin
 .branch-guide{fill:none;stroke:#64748b;stroke-width:1}
 .axis-tick{stroke:#8997aa;stroke-width:1}
 .gridline{stroke:var(--grid);stroke-width:1}
-.group-line{stroke:#202836;stroke-width:1}
+.group-line{stroke:#3a4655;stroke-width:1;vector-effect:non-scaling-stroke;pointer-events:none}
 .edge{fill:none;stroke-width:1.4;opacity:.24;transition:opacity .16s ease}
 .edge.lineage{stroke:var(--lineage)}
 .edge.within{stroke:var(--within);stroke-dasharray:14 5}

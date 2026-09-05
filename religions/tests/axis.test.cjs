@@ -43,3 +43,11 @@ test('Zooming back in restores the original label size', () => {
   assert.equal(sizes[1], sizes[3]);
   assert.ok(sizes[2] < sizes[1] && sizes[1] < sizes[0]);
 });
+
+test('Group lines stay thin and visible at every zoom level', () => {
+  const styles = fs.readFileSync(path.join(__dirname, '..', 'styles.css'), 'utf8');
+  const rule = styles.match(/\.group-line\{([^}]+)\}/)[1];
+  assert.match(rule, /stroke-width:1(?:;|$)/);
+  assert.match(rule, /vector-effect:non-scaling-stroke/);
+  assert.match(rule, /pointer-events:none/);
+});

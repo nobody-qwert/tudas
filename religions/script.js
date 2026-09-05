@@ -96,7 +96,7 @@ const gridG = document.getElementById('grid');
 const axisLabelsG = document.getElementById('axisLabels');
 const branchAxis = document.getElementById('branchAxis');
 const branchLabelsG = document.getElementById('branchLabels');
-const dateLabels=[], branchLabels=[];
+const dateLabels=[], branchLabels=[], groupLines=[];
 let branchLabelKey='';
 const shortBranchNames={
   'Ancient & oral':['Ancient','Anc.'], 'Iranian':['Iran.'],
@@ -135,13 +135,14 @@ function addSVG(tag, attrs, parent) {
 function renderGrid() {
   groups.forEach(g=>{
     const y=groupY[g]-28;
-    addSVG('line',{x1:0,y1:y,x2:worldW,y2:y,class:'group-line'},gridG);
+    groupLines.push(addSVG('line',{x1:0,y1:y,x2:worldW,y2:y,class:'group-line'},gridG));
     const label=addSVG('g',{'aria-label':g},branchLabelsG);
     const guide=addSVG('path',{class:'branch-guide'},label);
     const t=addSVG('text',{x:0,y:0,class:'group-label','text-anchor':'middle','dominant-baseline':'middle'},label);
     const title=addSVG('title',{},label);title.textContent=g;
     branchLabels.push({element:label,text:t,guide,y,name:g});
   });
+  groupLines.push(addSVG('line',{x1:0,y1:worldH,x2:worldW,y2:worldH,class:'group-line'},gridG));
   for(let y=-3500;y<=2000;y+=500){
     const x=xFor(y);
     addSVG('line',{x1:x,y1:0,x2:x,y2:worldH,class:'gridline'},gridG);
@@ -159,6 +160,12 @@ function renderGrid() {
   addDate(maxYear);
 }
 function updateAxisLabels(size){
+  // Span the visible width. The initial diagram bounds stay unchanged.
+  const startX=-tx/scale,endX=(size.width-tx)/scale;
+  groupLines.forEach(line=>{
+    line.setAttribute('x1',startX);
+    line.setAttribute('x2',endX);
+  });
   axisLabelsG.querySelector('.axis-background').setAttribute('width',size.width);
   const pixelsPerYear=(worldW-left-right)/(maxYear-minYear)*scale;
   const interval=[50,100,200,500,1000,2000].find(step=>step*pixelsPerYear>=90)||2000;
