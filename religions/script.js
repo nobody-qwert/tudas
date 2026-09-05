@@ -108,6 +108,7 @@ const edgesG = document.getElementById('edges');
 const nodesG = document.getElementById('nodes');
 const selectedEdgesOverlay = document.getElementById('selectedEdgesOverlay');
 const nodeInfo = document.getElementById('nodeInfo');
+const nodeInfoTitle = document.getElementById('nodeInfoTitle');
 const nodeInfoContent = document.getElementById('nodeInfoContent');
 const closeInfo = document.getElementById('closeInfo');
 const helpPanel = document.getElementById('helpPanel');
@@ -424,8 +425,8 @@ function renderNodeInfo(n) {
   const related=edges.filter(e=>e.source===n.id||e.target===n.id);
   const visibleEdges=new Set([...edgesG.querySelectorAll('.edge:not(.hidden)')].map(el=>Number(el.dataset.i)));
   const visible=edges.filter((e,i)=>visibleEdges.has(i)&&(e.source===n.id||e.target===n.id));
-  nodeInfoContent.innerHTML=`<h2>${esc(n.name)}</h2>
-    <p class="detail-date">${esc(n.date)}</p>
+  nodeInfoTitle.textContent=n.name;
+  nodeInfoContent.innerHTML=`<p class="detail-date">${esc(n.date)}</p>
     <p class="detail-desc">${esc(n.desc)}</p>
     ${n.dateBasis?`<p class="date-basis">${esc(n.dateBasis)}</p>`:''}
     ${referenceLinks(n.sources)}
@@ -457,7 +458,7 @@ function selectNode(id) {
   selectedId=id;
   nodeInfo.classList.toggle('hidden',mobileView.matches);
   updateFilters();
-  nodeInfo.scrollTop=0;
+  nodeInfoContent.scrollTop=0;
 }
 const viewPadding=16, maximumScale=2.2;
 function getFitScale(bounds,size){

@@ -16,7 +16,8 @@ function setup(mobile, landscape) {
   const context = vm.createContext({
     mobileView: { matches: mobile }, landscapeView: { matches: landscape },
     selectedId: 'previous', map: new Map([['previous', {}], ['box', {}]]),
-    nodeInfo: { classList: { toggle: (name, on) => on ? classes.add(name) : classes.delete(name) }, scrollTop: 50 },
+    nodeInfo: { classList: { toggle: (name, on) => on ? classes.add(name) : classes.delete(name) } },
+    nodeInfoContent: { scrollTop: 50 },
     helpPanel: { hidden: true, contains: () => false },
     document: { activeElement: input, querySelector: () => ({ contains: element => element === input }), getElementById: () => searchResults },
     closeHelp() {}, updateFilters: () => calls.updates++, renderNodeInfo: () => calls.renders++,
@@ -41,6 +42,7 @@ test('Desktop selection still opens details', () => {
   app.run("selectNode('box')");
   assert.equal(app.hidden(), false);
   assert.equal(app.calls.updates, 1);
+  assert.equal(app.context.nodeInfoContent.scrollTop, 0);
 });
 
 test('Mobile landscape leaves list view and closes search before resizing', () => {

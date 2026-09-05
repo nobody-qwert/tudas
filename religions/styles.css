@@ -157,9 +157,11 @@ button:hover,.home-link:hover{background:#223047} button:focus-visible,.home-lin
   #listView td[data-label="Name"] .text-link{font-weight:650;min-height:44px}
 }
 
-#nodeInfo{top:auto;right:auto;bottom:8px;left:8px;width:min(340px,calc(100% - 16px));max-height:min(320px,45%);padding:12px;border-radius:8px;font-size:13px;line-height:1.45}
-#nodeInfo h2{font-size:16px;line-height:1.3;padding-right:28px}
-#nodeInfo .close{top:6px;right:6px;min-width:24px;min-height:24px;padding:0 5px;font-size:16px}
+#nodeInfo{top:auto;right:auto;bottom:8px;left:8px;width:min(340px,calc(100% - 16px));max-height:min(320px,45%);display:flex;flex-direction:column;overflow:hidden;padding:0;border-radius:8px;font-size:13px;line-height:1.45}
+.detail-header{display:flex;align-items:flex-start;gap:8px;flex-shrink:0;padding:12px 12px 4px}
+#nodeInfo h2{flex:1;min-width:0;margin:0;font-size:16px;line-height:1.3;padding-right:0}
+#nodeInfo .close{position:static;flex-shrink:0;min-width:24px;min-height:24px;padding:0 5px;font-size:16px}
+#nodeInfoContent{min-height:0;overflow:auto;overscroll-behavior:contain;padding:0 12px 12px}
 .relations{margin-top:12px;padding-top:10px;border-top:1px solid #2b3645}
 .relations h3{margin:0;font-size:12px;font-weight:600}
 .relations ul{list-style:none;margin:0;padding:0}
@@ -172,7 +174,6 @@ button:hover,.home-link:hover{background:#223047} button:focus-visible,.home-lin
 .reference-links a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media(pointer:coarse){
   #nodeInfo .close{min-width:32px;min-height:32px}
-  #nodeInfo h2{padding-right:32px}
 }
 @media(hover:none) and (pointer:coarse){
   #nodeInfo{display:none}
