@@ -1,7 +1,7 @@
 :root {
   color-scheme: dark;
   --bg:#0b0e14; --panel:#121722; --panel2:#171d29; --text:#e9edf5; --muted:#9ba7b8;
-  --lineage:#e7e9ee; --influence:#d0a85c; --textrel:#6fb0dc; --eventrel:#c084fc; --grid:#293140;
+  --lineage:#e7e9ee; --within:#9bbdb2; --influence:#d0a85c; --textrel:#6fb0dc; --eventrel:#c084fc; --grid:#293140;
   --trad:#29364a; --textnode:#243f42; --movement:#42344b; --event:#4b3d2c;
   --accent:#89b4fa; --connection-glow:#67e8f9; --related-glow:#f6c177;
 }
@@ -32,6 +32,7 @@ button:hover,.home-link:hover{background:#223047} button:focus-visible,.home-lin
 .sample.text{border-top-color:var(--textrel);border-top-style:dotted}
 .sample.event{border-top-color:var(--eventrel);border-top-style:dashed}
 .sample.lineage{border-top-color:var(--lineage)}
+.sample.within{border-top-color:var(--within);border-top-style:dashed}
 #nodeInfo,#helpPanel{position:absolute;top:12px;right:12px;width:min(420px,calc(100% - 24px));max-height:calc(100% - 24px);overflow:auto;background:#101722ef;border:1px solid #2b3645;border-radius:12px;padding:14px 14px 12px;backdrop-filter:blur(6px);box-shadow:0 12px 30px rgba(0,0,0,.25)}
 #nodeInfo.hidden{display:none}
 #nodeInfo h2,#helpPanel h2{font-size:18px;margin:0 0 4px}
@@ -44,6 +45,7 @@ button:hover,.home-link:hover{background:#223047} button:focus-visible,.home-lin
 .group-line{stroke:#202836;stroke-width:1}
 .edge{fill:none;stroke-width:1.4;opacity:.24;transition:opacity .16s ease}
 .edge.lineage{stroke:var(--lineage)}
+.edge.within{stroke:var(--within);stroke-dasharray:14 5}
 .edge.influence{stroke:var(--influence);stroke-dasharray:6 5}
 .edge.text{stroke:var(--textrel);stroke-dasharray:2 4}
 .edge.event{stroke:var(--eventrel);stroke-dasharray:10 4 2 4}
@@ -56,6 +58,7 @@ button:hover,.home-link:hover{background:#223047} button:focus-visible,.home-lin
 .selected-edge-overlay.influence,.selected-edge-glow.influence{stroke-dasharray:8 5}
 .selected-edge-overlay.text,.selected-edge-glow.text{stroke-dasharray:2 4}
 .selected-edge-overlay.event,.selected-edge-glow.event{stroke-dasharray:10 4 2 4}
+.selected-edge-overlay.within,.selected-edge-glow.within{stroke-dasharray:14 5}
 .node.connection-neighbor{opacity:1}
 .node.connection-neighbor rect:not(.selection-ring){stroke:var(--related-glow);stroke-width:3;vector-effect:non-scaling-stroke}
 .node.selected{opacity:1}
@@ -190,6 +193,10 @@ summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .relations li{margin-top:10px}
 .relation-kind{display:block;color:#aeb9c9;font-size:11px}
 .relation-desc{margin:3px 0 0;color:#c8d1de;font-size:12px}
+.date-basis{margin:8px 0 0;color:#b6c2d3;font-size:12px}
+.reference-links{margin:2px 0 0;font-size:11px;line-height:1.5}
+.reference-links a{display:inline-block;min-height:24px;padding:3px 0;color:#a9c8ff;text-underline-offset:3px}
+.reference-links a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media(pointer:coarse){
   #nodeInfo .close{min-width:32px;min-height:32px}
   #nodeInfo h2{padding-right:32px}

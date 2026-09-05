@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Interactive Timeline & Family Tree of Religions and Sacred Texts</title>
-<link rel="stylesheet" href="styles.css?v=19">
+<link rel="stylesheet" href="styles.css?v=20">
 </head>
 <body>
 <header class="controls" aria-label="Timeline and diagram controls">
@@ -25,6 +25,7 @@
   <summary>Connections</summary>
   <div class="checks" aria-label="Relationship filters">
     <label><input id="showLineage" type="checkbox" checked> Lineage</label>
+    <label><input id="showWithin" type="checkbox" checked> Tradition within</label>
     <label><input id="showInfluence" type="checkbox" checked> Influence</label>
     <label><input id="showText" type="checkbox" checked> Text/canon</label>
     <label><input id="showEvent" type="checkbox" checked> Event/context</label>
@@ -87,12 +88,14 @@
 </footer>
 
 <template id="help-guide">
-  <div class="legrow"><span class="sample lineage"></span> descent / institutional split</div>
+  <div class="legrow"><span class="sample lineage"></span> historical continuity / descent</div>
+  <div class="legrow"><span class="sample within"></span> tradition within / shared communion</div>
   <div class="legrow"><span class="sample influence"></span> influence / shared milieu (not descent)</div>
   <div class="legrow"><span class="sample text"></span> scripture / textual relationship</div>
   <div class="legrow"><span class="sample event"></span> council / historical event context</div>
   <p><span class="selected-key">Cyan: selected</span> · <span class="related-key">Gold: related</span></p>
-  <p>Arrowheads mark the receiving box. Influence and event/context lines have no arrows. Dates increase from left to right; curves can bend around nearby boxes.</p>
+  <p>Arrowheads mark the receiving box on continuity and text links. Tradition-within, influence and event links have no arrows. A tradition within a religion is not necessarily a separate sect.</p>
+  <p>Text links can mean translation, inclusion, collection or scriptural authority. Each connection has an explanation and a source in the selected box’s details. Dates increase from left to right; curves can bend around nearby boxes.</p>
   <p>Select a box to highlight its connections. Select an empty area to clear the selection.</p>
 </template>
 
@@ -103,39 +106,11 @@
 </template>
 
 <template id="help-sources">
-  <ul>
-    
-    <li><a href="https://assets.cambridge.org/97811070/33931/excerpt/9781107033931_excerpt.pdf" target="_blank" rel="noopener">Cambridge — Buddhism/Jainism within the śramaṇa milieu</a></li>
-    <li><a href="https://link.springer.com/article/10.1007/s41682-022-00137-w" target="_blank" rel="noopener">Springer — formation and identity of Theravāda Buddhism</a></li>
-    <li><a href="https://resources.metmuseum.org/resources/metpublications/pdf/The_Arts_of_Korea_A_Resource_for_Educators.pdf" target="_blank" rel="noopener">Metropolitan Museum of Art — Buddhist transmission China → Korea → Japan</a></li>
-    <li><a href="https://academic.oup.com/edited-volume/61673/chapter-abstract/548062125" target="_blank" rel="noopener">Oxford Classical Dictionary — Samaritans</a></li>
-    <li><a href="https://www.cambridge.org/core/books/nag-hammadi-codices-and-their-ancient-readers/christian-book-culture-new-philology-and-gnosticism/ADCD9900881B746F4E525692DC50C768" target="_blank" rel="noopener">Cambridge — Nag Hammadi, book culture and the debated “Gnosticism” category</a></li>
-    <li><a href="https://www.iranicaonline.org/articles/manicheism-parent/manicheism-1-general-survey/" target="_blank" rel="noopener">Encyclopaedia Iranica — Manichaeism, general survey</a></li>
-    <li><a href="https://www.iranicaonline.org/articles/shaykhism/" target="_blank" rel="noopener">Encyclopaedia Iranica — disputed relationship between Shaykhism and Babism</a></li>
-    <li><a href="https://www.iranicaonline.org/articles/babism-index/babism-i-the-babi-movement/" target="_blank" rel="noopener">Encyclopaedia Iranica — Babism and its break with Islam</a></li>
-    <li><a href="https://www.iranicaonline.org/articles/bahaism-index/bahaism-i/" target="_blank" rel="noopener">Encyclopaedia Iranica — formation of the Bahá’í Faith</a></li>
-    <li><a href="https://www.iranicaonline.org/articles/armeno-iranian-relations-in-the-pre-islamic-period/" target="_blank" rel="noopener">Encyclopaedia Iranica — Church of the East / Sasanian church context</a></li>
-    <li><a href="https://www.rpcga.org/westminster-confession-of-1647/" target="_blank" rel="noopener">Westminster Confession (1647) — Protestant canon / Apocrypha marker</a></li>
-    <li><a href="https://www.imj.org.il/en/wings/shrine-book/dead-sea-scrolls" target="_blank" rel="noopener">Israel Museum — Dead Sea Scrolls</a></li>
-<li><a href="https://www.iranicaonline.org/articles/avesta-holy-book/" target="_blank" rel="noopener">Encyclopaedia Iranica — Avesta</a></li>
-<li><a href="https://plato.stanford.edu/entries/daoism/" target="_blank" rel="noopener">Stanford Encyclopedia of Philosophy — Daoism</a></li>
-<li><a href="https://iep.utm.edu/confucius/" target="_blank" rel="noopener">Internet Encyclopedia of Philosophy — Confucius</a></li>
-<li><a href="https://www.metmuseum.org/essays/gilgamesh" target="_blank" rel="noopener">Metropolitan Museum of Art — Sumerian and Akkadian development of Gilgamesh literature</a></li>
-<li><a href="https://www.cambridge.org/core/journals/harvard-theological-review/article/abs/canon-formation-and-social-conflict-in-fourthcentury-egypt-athanasius-of-alexandrias-thirtyninth-festal-letter/32DE04D9904E7E77475FB529FA4B67BD" target="_blank" rel="noopener">Harvard Theological Review — Athanasius and the 27-book New Testament list</a></li>
-<li><a href="https://academic.oup.com/book/11236" target="_blank" rel="noopener">Oxford — reception of Nicaea in the councils through Chalcedon</a></li>
-<li><a href="https://academic.oup.com/reference/62357/reference-article-abstract/554509203" target="_blank" rel="noopener">Oxford Bibliographies — Tamil Bhakti from the 6th century</a></li>
-<li><a href="https://www.cambridge.org/core/books/abs/zohar-reception-and-impact/formation-of-the-zoharic-canon/7DDD1FF048FD256750CF3B546E1FEABA" target="_blank" rel="noopener">Cambridge — formation of the Zoharic canon</a></li>
-<li><a href="https://academic.oup.com/book/7570/chapter-abstract/152568126" target="_blank" rel="noopener">Oxford — African-Jamaican Christian traditions and Rastafari</a></li>
-<li><a href="https://www.cambridge.org/core/books/nag-hammadi-codices-and-their-ancient-readers/" target="_blank" rel="noopener">Cambridge University Press — Nag Hammadi codices & ancient readers</a></li>
-<li><a href="https://www.biblicalarchaeology.org/daily/biblical-artifacts/artifacts-and-the-bible/liberator-of-the-nag-hammadi-codices/" target="_blank" rel="noopener">Biblical Archaeology Society — Nag Hammadi codices overview</a></li>
-<li><a href="https://www.ethiopianorthodox.org/english/canonical/books.html" target="_blank" rel="noopener">Ethiopian Orthodox Tewahedo Church — canonical books</a></li>
-<li><a href="https://www.nadadventist.org/about/history/" target="_blank" rel="noopener">North American Division of Seventh-day Adventists — history</a></li>
-<li><a href="https://newsroom.churchofjesuschrist.org/article/history-of-the-church-of-jesus-christ-of-latter-day-saints" target="_blank" rel="noopener">Church of Jesus Christ of Latter-day Saints — history</a></li>
-<li><a href="https://www.jw.org/en/news/region/global/Ninety-Years-Embracing-the-Name-Jehovahs-Witnesses/" target="_blank" rel="noopener">Jehovah's Witnesses — history of the name</a></li>
-  </ul>
-  <p>For a fully academic version, individual nodes could be expanded with book/article citations and competing scholarly date ranges.</p>
+  <p>Each connection links to its reference in the selected box’s details. References explain the relationship; they do not make uncertain dates exact.</p>
+  <p>Some sources require a subscription. This diagram is a broad overview, not a complete history of every tradition.</p>
 </template>
 
-<script src="script.js?v=20"></script>
+<script src="history.js?v=1"></script>
+<script src="script.js?v=21"></script>
 </body>
 </html>

@@ -63,6 +63,7 @@ edges.push({source:'chinabuddh',target:'koreabuddh',type:'lineage',label:'transm
 edges.push({source:'koreabuddh',target:'japanbuddh',type:'lineage',label:'official Japanese introduction through Baekje, conventionally 538 or 552'});
 reviseEdge('protbible','rastafari',{source:'baptist',label:'Afro-Jamaican Christian and biblical milieu, including Native Baptist and Revival traditions'});
 
+const references = applyTimelineHistory(nodes, edges);
 const groups = ["Ancient & oral", "Iranian", "Jewish", "Christian", "Islamic", "Bábí & Bahá’í", "South Asian", "Chinese & East Asian", "Other / modern"];
 // Larger cards keep names readable across several centuries at once.
 const rowGap=108, nodeW=480, nodeH=84, groupGap=108;
@@ -167,7 +168,7 @@ function isDirected(e){
 }
 function connectionTitle(e){
   const a=map.get(e.source),b=map.get(e.target);
-  const types={lineage:'Lineage',text:'Text relationship',influence:'Influence / shared context',event:'Event / context'};
+  const types={lineage:'Historical continuity / descent',within:'Tradition within',text:'Text relationship',influence:'Influence / shared context',event:'Event / context'};
   return `${types[e.type]}: ${a.name}${isDirected(e)?' → ':' — '}${b.name}${e.label?' — '+e.label:''}`;
 }
 function renderEdges() {
@@ -186,8 +187,7 @@ function renderNodes() {
     const t=addSVG('text',{x:14,y:34},g);
     fitLabel(t,n.name,nodeW-40);
     const d=addSVG('text',{x:14,y:64,class:'date'},g);
-    d.textContent=n.date;
-    if(d.getComputedTextLength()>nodeW-40)d.textContent=fmtYear(n.year);
+    fitLabel(d,n.shortDate||n.date,nodeW-40);
     const title=addSVG('title',{},g); title.textContent=n.name+' — '+n.date;
     g.addEventListener('pointerdown',event=>event.stopPropagation());
     g.addEventListener('click',()=>selectNode(n.id));
@@ -279,6 +279,15 @@ function openHelp(button){
   const titles={guide:'Connection guide',about:'About dates and connections',sources:'Reference sources'};
   helpTitle.textContent=titles[button.dataset.help];
   helpContent.replaceChildren(document.getElementById(`help-${button.dataset.help}`).content.cloneNode(true));
+  if(button.dataset.help==='sources'){
+    const list=document.createElement('ul');
+    Object.values(references).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([title,url])=>{
+      const item=document.createElement('li');
+      item.innerHTML=`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(title)}</a>`;
+      list.appendChild(item);
+    });
+    helpContent.appendChild(list);
+  }
   nodeInfo.classList.add('hidden');
   helpPanel.hidden=false;
   helpPanel.scrollTop=0;
@@ -292,19 +301,29 @@ function renderNodeInfo(n) {
   nodeInfoContent.innerHTML=`<h2>${esc(n.name)}</h2>
     <p class="detail-date">${esc(n.date)}</p>
     <p class="detail-desc">${esc(n.desc)}</p>
+    ${n.dateBasis?`<p class="date-basis">${esc(n.dateBasis)}</p>`:''}
+    ${referenceLinks(n.sources)}
     <section class="relations" aria-label="Connections">
       <h3>Connections (${visible.length})</h3>
       ${visible.length?`<ul>${visible.map(e=>relationText(e,n)).join('')}</ul>`:`<p>${related.length?'Connections are hidden by the current filters.':'No connections are listed.'}</p>`}
       ${visible.length&&visible.length<related.length?`<p class="relation-kind">${related.length-visible.length} hidden by filters.</p>`:''}
     </section>`;
 }
+function referenceLinks(ids=[]){
+  if(!ids.length)return '';
+  return `<p class="reference-links">${ids.map((id,i)=>{
+    const [title,url]=references[id];
+    return `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer" title="${esc(title)}" aria-label="Source: ${esc(title)}">Source${ids.length>1?' '+(i+1):''}</a>`;
+  }).join(' · ')}</p>`;
+}
 function relationText(e,n){
   const outgoing=e.source===n.id;
   const other=map.get(outgoing?e.target:e.source);
-  const labels={lineage:outgoing?'Lineage to':'Lineage from',text:outgoing?'Text link to':'Text link from',influence:'Influence / shared context',event:'Event / context'};
+  const labels={lineage:outgoing?'Continuity / descent to':'Continuity / descent from',within:outgoing?'Includes tradition':'Tradition within',text:outgoing?'Text link to':'Text link from',influence:'Influence / shared context',event:'Event / context'};
   return `<li><span class="relation-kind">${labels[e.type]}</span>
     <button class="text-link" type="button" data-node-id="${esc(other.id)}">${esc(other.name)}</button>
-    ${e.label?`<p class="relation-desc">${esc(e.label)}</p>`:''}</li>`;
+    ${e.label?`<p class="relation-desc">${esc(e.label)}</p>`:''}
+    ${referenceLinks(e.sources)}</li>`;
 }
 function selectNode(id) {
   const n=map.get(id); if(!n)return;
@@ -351,7 +370,7 @@ function fitNodes(items, reserveDetails=false){
 function resetView(){
   closeHelp();
   search.value=''; groupFilter.value='all';
-  [showLineage,showInfluence,showText,showEvent].forEach(el=>el.checked=true);
+  Object.values(relationshipFilters).forEach(el=>el.checked=true);
   clearSelection(); updateFilters();
   if(!listView.classList.contains('active'))fitAll();
 }
@@ -458,7 +477,7 @@ function updateFilters(){
   document.querySelectorAll('.edge').forEach((el,i)=>{
     const e=edges[i], a=map.get(e.source),b=map.get(e.target);
     const groupOK=gf==='all'||(a.group===gf&&b.group===gf);
-    const typeOK=(e.type==='lineage'&&showLineage.checked)||(e.type==='influence'&&showInfluence.checked)||(e.type==='text'&&showText.checked)||(e.type==='event'&&showEvent.checked);
+    const typeOK=relationshipFilters[e.type].checked;
     el.classList.toggle('hidden',!(groupOK&&typeOK));
   });
   if(selectedId){
@@ -491,8 +510,8 @@ function updateFilters(){
     });
   }
 }
-const showLineage=document.getElementById('showLineage'),showInfluence=document.getElementById('showInfluence'),showText=document.getElementById('showText'),showEvent=document.getElementById('showEvent');
-[search,groupFilter,showLineage,showInfluence,showText,showEvent].forEach(el=>el.addEventListener('input',updateFilters));
+const relationshipFilters=Object.fromEntries(['lineage','within','influence','text','event'].map(type=>[type,document.getElementById('show'+type[0].toUpperCase()+type.slice(1))]));
+[search,groupFilter,...Object.values(relationshipFilters)].forEach(el=>el.addEventListener('input',updateFilters));
 groupFilter.addEventListener('change',()=>fitNodes(matchingNodes()));
 search.addEventListener('focus',updateFilters);
 search.addEventListener('keydown',e=>{
