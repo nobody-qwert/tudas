@@ -4,12 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Interactive Timeline & Family Tree of Religions and Sacred Texts</title>
-<link rel="stylesheet" href="styles.css?v=22">
+<link rel="stylesheet" href="styles.css?v=28">
 </head>
 <body>
 <header class="controls" aria-label="Timeline and diagram controls">
   <a class="home-link" href="../">← Home</a>
-  <h1 class="toolbar-title">Religions and sacred texts</h1>
   <div class="search-control">
     <label for="search" class="sr-only">Search</label>
     <input id="search" type="search" placeholder="Search names or texts…" aria-controls="searchResults" autocomplete="off">
@@ -21,30 +20,15 @@
       <option>Ancient & oral</option><option>Iranian</option><option>Jewish</option><option>Christian</option><option>Islamic</option><option>Bábí & Bahá’í</option><option>South Asian</option><option>Chinese & East Asian</option><option>Other / modern</option>
     </select>
   </label>
-  <details class="connection-options">
-  <summary>Connections</summary>
-  <div class="checks" aria-label="Relationship filters">
-    <label><input id="showLineage" type="checkbox" checked> Lineage</label>
-    <label><input id="showWithin" type="checkbox" checked> Tradition within</label>
-    <label><input id="showInfluence" type="checkbox" checked> Influence</label>
-    <label><input id="showText" type="checkbox" checked> Text/canon</label>
-    <label><input id="showEvent" type="checkbox" checked> Event/context</label>
-  </div>
-  </details>
-  <button id="fitBtn" type="button" data-diagram-control>Fit results</button>
-  <button id="resetBtn" type="button">Reset all</button>
-  <div class="zoom-controls" role="group" aria-label="Zoom" data-diagram-control>
-    <button id="zoomOut" type="button" aria-label="Zoom out">−</button>
-    <output id="zoomLevel" aria-label="Zoom level">100%</output>
-    <button id="zoomIn" type="button" aria-label="Zoom in">+</button>
-  </div>
   <button id="toggleList" type="button" aria-pressed="false" aria-controls="listView">List view</button>
-  <span id="status" class="status" aria-live="polite"></span>
 </header>
 
 <main class="workspace">
 <div id="diagramArea" class="main">
   <div id="stageWrap">
+    <svg id="branchAxis" role="img" aria-label="Tradition and region axis">
+      <g id="branchLabels"></g>
+    </svg>
     <svg id="stage" role="group" aria-label="Interactive time tree of religions and sacred texts">
       <defs>
         <marker id="arrow-lineage" markerWidth="7" markerHeight="7" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#e7e9ee"/></marker>
@@ -69,7 +53,7 @@
 </div>
 
 <div id="listView">
-  <p id="listEmpty" hidden>No results. Try another search or reset the filters.</p>
+  <p id="listEmpty" hidden>No results. Try another search or choose All branches.</p>
   <table>
     <thead><tr><th>Date</th><th>Name</th><th>Branch</th><th>Type</th><th>Notes</th></tr></thead>
     <tbody id="listBody"></tbody>
@@ -114,6 +98,6 @@
 </template>
 
 <script src="history.js?v=1"></script>
-<script src="script.js?v=25"></script>
+<script src="script.js?v=31"></script>
 </body>
 </html>

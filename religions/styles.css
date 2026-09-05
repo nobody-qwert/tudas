@@ -17,12 +17,11 @@ input[type="search"],select{min-width:180px;padding:8px 10px;border-radius:8px;b
 button,.home-link{padding:8px 11px;border-radius:8px;border:1px solid #344052;background:#192231;color:var(--text);cursor:pointer}
 .home-link{display:inline-flex;align-items:center;min-height:36px;text-decoration:none}
 button:hover,.home-link:hover{background:#223047} button:focus-visible,.home-link:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.checks{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding-bottom:2px}
-.checks label{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--text)}
 .workspace{position:relative;flex:1;min-height:0;overflow:hidden}
 .main{display:block;height:100%}
-#stageWrap{position:relative;height:100%;overflow:hidden;background:#0a0d13}
-#stage{width:100%;height:100%;display:block;cursor:grab;touch-action:none}
+#stageWrap{position:relative;height:100%;overflow:hidden;background:#0a0d13;display:grid;grid-template-columns:36px minmax(0,1fr);grid-template-rows:minmax(0,1fr)}
+#branchAxis{width:100%;height:100%;display:block;overflow:hidden;background:#10151d;border-right:1px solid #293140}
+#stage{width:100%;height:100%;min-width:0;display:block;overflow:hidden;cursor:grab;touch-action:none}
 #stage.dragging{cursor:grabbing}
 .detail-date{color:#b6c2d3;margin:4px 0 8px;font-size:12px}
 .detail-desc{color:#dce3ed;margin:0}
@@ -42,7 +41,8 @@ button:hover,.home-link:hover{background:#223047} button:focus-visible,.home-lin
 #axisLabels{pointer-events:none}
 .axis-background{fill:#0a0d13;fill-opacity:.94}
 .axis-label{fill:#c5ceda;font-size:13px;font-weight:600}
-.group-label{fill:#e9edf5;font-size:14px;font-weight:650;paint-order:stroke;stroke:#0a0d13;stroke-width:4px;stroke-linejoin:round}
+.group-label{fill:#e9edf5;font-size:14px;font-weight:650}
+.branch-guide{fill:none;stroke:#64748b;stroke-width:1}
 .axis-tick{stroke:#8997aa;stroke-width:1}
 .gridline{stroke:var(--grid);stroke-width:1}
 .group-line{stroke:#202836;stroke-width:1}
@@ -54,7 +54,6 @@ button:hover,.home-link:hover{background:#223047} button:focus-visible,.home-lin
 .edge.event{stroke:var(--eventrel);stroke-dasharray:10 4 2 4}
 .edge.hidden{display:none}
 .edge.connection-focus{opacity:0}
-.edge.connection-muted{opacity:0}
 #selectedEdgesOverlay{pointer-events:none}
 .selected-edge-glow{fill:none;stroke:var(--connection-glow);stroke-width:9;opacity:.24;pointer-events:none;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;filter:drop-shadow(0 0 6px var(--connection-glow))}
 .selected-edge-overlay{fill:none;stroke:var(--connection-glow);stroke-width:3.2;opacity:1;pointer-events:none;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;filter:drop-shadow(0 0 3px var(--connection-glow))}
@@ -66,7 +65,7 @@ button:hover,.home-link:hover{background:#223047} button:focus-visible,.home-lin
 .node.connection-neighbor rect:not(.selection-ring){stroke:var(--related-glow);stroke-width:3;vector-effect:non-scaling-stroke}
 .node.selected{opacity:1}
 
-#stage,#stage *{-webkit-user-select:none;user-select:none}
+#stage,#stage *,#branchAxis,#branchAxis *{-webkit-user-select:none;user-select:none}
 .node{cursor:pointer}
 .node rect{stroke:#536174;stroke-width:1}
 .node rect.selection-ring{fill:none!important;stroke:transparent;stroke-width:0;pointer-events:none;vector-effect:non-scaling-stroke}
@@ -101,16 +100,14 @@ button:hover,.home-link:hover{background:#223047} button:focus-visible,.home-lin
 .bottom-bar button:hover,.bottom-bar button[aria-pressed="true"]{color:#fff;background:#223047}
 .bottom-bar button:focus-visible{outline-offset:-2px}
 .bottom-hint{margin-left:auto;padding-right:4px;font-size:11px;color:var(--muted)}
-.status{color:#aeb9c9;font-size:12px;padding-bottom:8px}
 
 @media(max-width:700px){
+  #stageWrap{grid-template-columns:27px minmax(0,1fr)}
+  .group-label{font-size:13px}
   .controls{position:static;align-items:stretch;padding:10px;gap:8px}
   .controls>label{flex:1 1 145px}
   input[type="search"],select{width:100%;min-width:0;min-height:44px}
-  .checks{flex:1 0 100%;gap:12px;overflow-x:auto;flex-wrap:nowrap;padding:2px 0 5px}
-  .checks label{white-space:nowrap;min-height:36px}
   .controls button,.controls .home-link{flex:1 1 92px;min-height:44px;padding:8px;justify-content:center}
-  .status{flex:1 0 100%;padding:2px 0 0}
   #nodeInfo,#helpPanel{position:absolute;top:auto;right:8px;bottom:8px;left:8px;width:auto;max-height:52%;padding:14px 12px 12px;border-radius:14px}
   #nodeInfo .close,#helpPanel .close{min-width:40px;min-height:40px;top:6px;right:6px;font-size:20px}
   #listView{padding:10px;overflow-x:auto}
@@ -125,7 +122,6 @@ button:hover,.home-link:hover{background:#223047} button:focus-visible,.home-lin
 }
 
 [hidden]{display:none!important}
-.toolbar-title{font-size:14px;line-height:1.2;margin:0;white-space:nowrap}
 .controls>.home-link{flex-shrink:0}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
 .search-control{position:relative;display:grid;flex:1 1 160px;max-width:240px;min-width:0}
@@ -137,21 +133,10 @@ button:hover,.home-link:hover{background:#223047} button:focus-visible,.home-lin
 #searchResults p{margin:8px;color:var(--muted);font-size:12px}
 .search-result{display:grid;text-align:left;width:100%;gap:3px;border:0;background:transparent;padding:10px}
 .search-result span{font-size:12px;color:var(--muted)}
-.connection-options{position:relative}
-.connection-options summary{cursor:pointer;list-style:none;padding:8px 11px;border:1px solid #344052;border-radius:8px;background:#192231}
-.connection-options summary::after{content:' ▾'}
-.connection-options[open] summary::after{content:' ▴'}
-.connection-options .checks{position:absolute;top:calc(100% + 6px);left:0;display:grid;gap:0;min-width:205px;background:var(--panel);border:1px solid #415066;border-radius:10px;padding:6px;z-index:25;box-shadow:0 12px 24px #0005}
-.checks label{min-height:44px;padding:6px;cursor:pointer}
-.checks input{accent-color:var(--connection-glow);width:17px;height:17px}
-.zoom-controls{display:flex;align-items:center;gap:2px}
-.zoom-controls button{min-width:38px;font-size:17px;padding:5px 10px}
-#zoomLevel{min-width:45px;text-align:center;color:var(--muted);font-size:12px}
-.status{flex:1 1 65px;min-width:0;padding:0;font-size:11px}
 @media(min-width:701px){
   .controls{padding-top:3px;padding-bottom:3px;row-gap:4px}
-  .controls>.home-link,.controls>button,.controls .zoom-controls button,
-  .controls input[type="search"],.controls select,.connection-options summary{
+  .controls>.home-link,.controls>button,
+  .controls input[type="search"],.controls select{
     height:29px;min-height:29px;padding-top:3px;padding-bottom:3px;line-height:21px;
   }
 }
@@ -161,23 +146,13 @@ button:hover,.home-link:hover{background:#223047} button:focus-visible,.home-lin
 .text-link:hover{background:transparent;color:#d4e6ff}
 #nodeInfo,#helpPanel{touch-action:pan-y;overscroll-behavior:contain}
 #nodeInfo h2,#helpPanel h2{padding-right:30px}
-summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 @media(max-width:700px){
   .controls{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));padding:8px;gap:6px}
   .controls>.home-link{grid-column:span 2}
-  .toolbar-title{grid-column:span 4;align-self:center;white-space:normal}
   .controls select{min-width:0;max-width:none}
-  .search-control{grid-column:span 3;min-width:0;max-width:none}
-  .branch-control{grid-column:span 3;min-width:0}
-  .connection-options,#fitBtn,#resetBtn{grid-column:span 2}
-  .zoom-controls,#toggleList{grid-column:span 3}
-  .status{grid-column:1 / -1}
-  .controls button,.connection-options summary{font-size:12px}
-  .connection-options summary{padding:6px;justify-content:center;white-space:nowrap}
-  .controls>.connection-options{align-self:end}
-  .connection-options summary{min-height:44px;display:flex;align-items:center;gap:6px}
-  .controls .zoom-controls{flex:1 1 auto;justify-content:center}
-  .controls .zoom-controls button{flex:0 0 44px}
+  .search-control{grid-column:span 4;min-width:0;max-width:none}
+  .branch-control,#toggleList{grid-column:span 3;min-width:0}
+  .controls button{font-size:12px}
   #listView table{min-width:0;background:transparent}
   #listView thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
   #listView tbody{display:block}

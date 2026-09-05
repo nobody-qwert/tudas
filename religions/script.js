@@ -94,7 +94,16 @@ const svg = document.getElementById('stage');
 const viewport = document.getElementById('viewport');
 const gridG = document.getElementById('grid');
 const axisLabelsG = document.getElementById('axisLabels');
+const branchAxis = document.getElementById('branchAxis');
+const branchLabelsG = document.getElementById('branchLabels');
 const dateLabels=[], branchLabels=[];
+let branchLabelKey='';
+const shortBranchNames={
+  'Ancient & oral':['Ancient','Anc.'], 'Iranian':['Iran.'],
+  'Christian':['Christian','Chr.'], 'Islamic':['Islam'],
+  'Bábí & Bahá’í':['Bábí/Bahá’í','B/B'], 'South Asian':['S. Asian','S.As.'],
+  'Chinese & East Asian':['E. Asian','E.As.'], 'Other / modern':['Modern','Mod.']
+};
 const edgesG = document.getElementById('edges');
 const nodesG = document.getElementById('nodes');
 const selectedEdgesOverlay = document.getElementById('selectedEdgesOverlay');
@@ -108,7 +117,6 @@ const closeHelpButton = document.getElementById('closeHelp');
 let helpTrigger=null;
 const search = document.getElementById('search');
 const groupFilter = document.getElementById('groupFilter');
-const status = document.getElementById('status');
 const worldH=nextGroupY+40;
 const map = new Map(nodes.map(n=>[n.id,n]));
 function xFor(y) { return left + ((y-minYear)/(maxYear-minYear))*(worldW-left-right); }
@@ -128,8 +136,11 @@ function renderGrid() {
   groups.forEach(g=>{
     const y=groupY[g]-28;
     addSVG('line',{x1:0,y1:y,x2:worldW,y2:y,class:'group-line'},gridG);
-    const t=addSVG('text',{x:12,class:'group-label'},axisLabelsG); t.textContent=g;
-    branchLabels.push({element:t,y});
+    const label=addSVG('g',{'aria-label':g},branchLabelsG);
+    const guide=addSVG('path',{class:'branch-guide'},label);
+    const t=addSVG('text',{x:0,y:0,class:'group-label','text-anchor':'middle','dominant-baseline':'middle'},label);
+    const title=addSVG('title',{},label);title.textContent=g;
+    branchLabels.push({element:label,text:t,guide,y,name:g});
   });
   for(let y=-3500;y<=2000;y+=500){
     const x=xFor(y);
@@ -171,25 +182,77 @@ function updateAxisLabels(size){
     if(box.left<lastRight+14||(present&&box.right+14>present.left))label.element.style.display='none';
     else lastRight=box.right;
   });
-  const visibleBranches=[];
-  let lastBaseline=28;
+  updateBranchLabels(size);
+}
+function getBranchLabelFontSize(zoom,width,height){
+  const maximum=width<30?(height<450?12:13):14;
+  // Below 20% zoom, reduce label size gradually. Keep an 11px minimum.
+  const factor=Math.sqrt(Math.min(1,Math.max(0,zoom)/.2));
+  return Math.max(11,Math.round(maximum*factor*4)/4);
+}
+function updateBranchLabels(size){
+  const width=branchAxis.getBoundingClientRect().width-1;
+  const fontSize=getBranchLabelFontSize(scale,width,size.height);
+  const gap=12;
+  const key=`${width}:${fontSize}`;
+  if(key!==branchLabelKey){
+    branchLabelKey=key;
+    branchLabels.forEach(label=>{
+      label.element.style.display='';
+      label.text.style.fontSize=`${fontSize}px`;
+      label.choices=[...new Set([label.name,...(shortBranchNames[label.name]||[])])].map(name=>{
+        label.text.textContent=name;
+        const box=label.text.getBBox();
+        return {name,extent:box.width,cross:box.y+box.height/2,along:box.x+box.width/2};
+      });
+    });
+  }
+  const visible=[];
   branchLabels.forEach((label,index)=>{
     const top=ty+label.y*scale;
     const bottom=ty+(branchLabels[index+1]?.y??worldH)*scale;
-    const baseline=Math.max(48,top-6);
-    const visible=bottom>54&&baseline<size.height-8;
-    label.element.style.display=visible?'':'none';
-    if(visible){
-      lastBaseline=Math.max(baseline,lastBaseline+20);
-      visibleBranches.push({element:label.element,baseline:lastBaseline});
+    const shown=bottom>0&&top<size.height;
+    label.element.style.display=shown?'':'none';
+    if(shown){
+      label.choice=0;
+      label.target=(Math.max(0,top)+Math.min(size.height,bottom))/2;
+      visible.push(label);
     }
   });
-  // Keep small adjacent branches named in the full view on narrow screens.
-  let nextBaseline=size.height+12;
-  visibleBranches.reverse().forEach(label=>{
-    label.baseline=Math.min(label.baseline,nextBaseline-20);
-    label.element.setAttribute('y',label.baseline);
-    nextBaseline=label.baseline;
+  // Use shorter names only if needed to keep a clear gap between labels.
+  // The full name stays in the native tooltip and accessible label.
+  const room=Math.max(0,size.height-12-gap*Math.max(0,visible.length-1));
+  let total=visible.reduce((sum,label)=>sum+label.choices[0].extent,0);
+  while(total>room){
+    let best=null, saving=0;
+    visible.forEach(label=>{
+      const next=label.choices[label.choice+1];
+      const reduction=next?label.choices[label.choice].extent-next.extent:0;
+      if(reduction>saving){best=label;saving=reduction;}
+    });
+    if(!best)break;
+    best.choice++;total-=saving;
+  }
+  visible.forEach(label=>{
+    const choice=label.choices[label.choice];
+    label.text.textContent=choice.name;
+    if(total>room)fitLabel(label.text,choice.name,Math.max(1,choice.extent*room/total));
+    const box=label.text.getBBox();
+    label.extent=box.width;
+    label.cross=box.y+box.height/2;
+    label.along=box.x+box.width/2;
+  });
+  visible.forEach((label,index)=>{
+    const previous=visible[index-1];
+    label.center=Math.max(label.target,label.extent/2+6,previous?previous.center+(previous.extent+label.extent)/2+gap:0);
+  });
+  for(let index=visible.length-1;index>=0;index--){
+    const label=visible[index],next=visible[index+1];
+    label.center=Math.min(label.center,size.height-label.extent/2-6,next?next.center-(label.extent+next.extent)/2-gap:Infinity);
+  }
+  visible.forEach(label=>{
+    label.text.setAttribute('transform',`translate(${(width-4)/2-label.cross} ${label.center+label.along}) rotate(-90)`);
+    label.guide.setAttribute('d',`M${width-3},${label.center} L${width-1},${label.target} H${width}`);
   });
 }
 function edgePath(a,b,index) {
@@ -284,11 +347,11 @@ function applySelectionFocus(){
   const nodeEls=[...document.querySelectorAll('.node')];
   const edgeEls=[...document.querySelectorAll('.edge')];
   nodeEls.forEach(el=>{
-    el.classList.remove('selected','connection-neighbor','connection-muted');
+    el.classList.remove('selected','connection-neighbor');
     el.removeAttribute('aria-current');
     el.removeAttribute('data-related-to-selection');
   });
-  edgeEls.forEach(el=>el.classList.remove('connection-focus','connection-muted'));
+  edgeEls.forEach(el=>el.classList.remove('connection-focus'));
   if(!selectedId){
     renderSelectedEdgeOverlay();
     return;
@@ -311,7 +374,7 @@ function applySelectionFocus(){
       el.setAttribute('data-related-to-selection','true');
     }
   });
-  edgeEls.forEach((el,i)=>el.classList.add(connectedEdgeIndexes.has(i)?'connection-focus':'connection-muted'));
+  edgeEls.forEach((el,i)=>el.classList.toggle('connection-focus',connectedEdgeIndexes.has(i)));
   renderSelectedEdgeOverlay();
 }
 function clearSelection(hideInfo=true){
@@ -426,7 +489,6 @@ function applyTransform(){
   const arrow=document.getElementById('arrow-selected');
   arrow.setAttribute('markerWidth',10/scale);
   arrow.setAttribute('markerHeight',8/scale);
-  document.getElementById('zoomLevel').textContent=`${Math.round(scale*100)}%`;
 }
 function fitAll(){
   const r=viewSize();
@@ -455,13 +517,6 @@ function fitNodes(items, reserveDetails=false){
   ty=height/2-(minY+maxY)/2*scale;
   applyTransform();
 }
-function resetView(){
-  closeHelp();
-  search.value=''; groupFilter.value='all';
-  Object.values(relationshipFilters).forEach(el=>el.checked=true);
-  clearSelection(); updateFilters();
-  if(!listView.classList.contains('active'))fitAll();
-}
 function openNode(id){
   setListView(false);
   document.getElementById('searchResults').hidden=true;
@@ -474,6 +529,7 @@ let dragging=false,lastX=0,lastY=0;
 let backgroundTap=null;
 const activePointers=new Map();
 svg.addEventListener('selectstart',event=>event.preventDefault());
+branchAxis.addEventListener('selectstart',event=>event.preventDefault());
 let pinchStartDistance=0,pinchStartScale=1,pinchWorldX=0,pinchWorldY=0;
 function pointerDistance() {
   const [a,b]=[...activePointers.values()];
@@ -544,16 +600,9 @@ svg.addEventListener('wheel',e=>{
   const newScale=boundedScale(scale*factor,r);
   tx=mx-beforeX*newScale; ty=my-beforeY*newScale; scale=newScale; applyTransform();
 },{passive:false});
-function zoom(f){
-  const r=svg.getBoundingClientRect(),mx=r.width/2,my=r.height/2;
-  const bx=(mx-tx)/scale,by=(my-ty)/scale;
-  scale=boundedScale(scale*f,r);
-  tx=mx-bx*scale;ty=my-by*scale;applyTransform();
-}
 function updateFilters(){
   const q=search.value.trim().toLowerCase();
   const gf=groupFilter.value;
-  let visible=0, matched=0;
   document.querySelectorAll('.node').forEach(el=>{
     const n=map.get(el.dataset.id);
     const groupOK=gf==='all'||n.group===gf;
@@ -561,23 +610,17 @@ function updateFilters(){
     const text=(n.name+' '+n.desc+' '+n.date+' '+n.group).toLowerCase();
     const match=!q||text.includes(q);
     el.classList.toggle('dim',groupOK&&!match);
-    if(groupOK)visible++; if(groupOK&&match)matched++;
   });
   document.querySelectorAll('.edge').forEach((el,i)=>{
     const e=edges[i], a=map.get(e.source),b=map.get(e.target);
     const groupOK=gf==='all'||(a.group===gf&&b.group===gf);
-    const typeOK=relationshipFilters[e.type].checked;
-    el.classList.toggle('hidden',!(groupOK&&typeOK));
+    el.classList.toggle('hidden',!groupOK);
   });
   if(selectedId){
     const selectedNode=map.get(selectedId);
     if(gf!=='all'&&selectedNode.group!==gf) clearSelection(true);
     else applySelectionFocus();
   }
-  const edgeEls=[...document.querySelectorAll('#edges .edge')];
-  const highlighted=selectedId ? edges.filter((e,i)=>(e.source===selectedId||e.target===selectedId)&&!edgeEls[i]?.classList.contains('hidden')).length : 0;
-  const base=q?`${matched} results in ${visible} boxes`:`${visible} boxes`;
-  status.textContent=highlighted?`${base} · ${highlighted} connections highlighted`:base;
   if(selectedId&&!nodeInfo.classList.contains('hidden'))renderNodeInfo(map.get(selectedId));
   renderSelectedEdgeOverlay();
   const matches=matchingNodes(), ids=new Set(matches.map(n=>n.id));
@@ -599,8 +642,7 @@ function updateFilters(){
     });
   }
 }
-const relationshipFilters=Object.fromEntries(['lineage','within','influence','text','event'].map(type=>[type,document.getElementById('show'+type[0].toUpperCase()+type.slice(1))]));
-[search,groupFilter,...Object.values(relationshipFilters)].forEach(el=>el.addEventListener('input',updateFilters));
+[search,groupFilter].forEach(el=>el.addEventListener('input',updateFilters));
 groupFilter.addEventListener('change',()=>fitNodes(matchingNodes()));
 search.addEventListener('focus',updateFilters);
 search.addEventListener('keydown',e=>{
@@ -625,10 +667,6 @@ document.addEventListener('keydown',e=>{
     if(hadSelection)document.querySelector(`.node[data-id="${hadSelection}"]`)?.focus({preventScroll:true});
   }
 });
-document.getElementById('fitBtn').addEventListener('click',()=>fitNodes(matchingNodes()));
-document.getElementById('resetBtn').addEventListener('click',resetView);
-document.getElementById('zoomIn').addEventListener('click',()=>zoom(1.25));
-document.getElementById('zoomOut').addEventListener('click',()=>zoom(0.8));
 const listView=document.getElementById('listView'),diagramArea=document.getElementById('diagramArea'),toggleList=document.getElementById('toggleList');
 document.querySelectorAll('[data-help]').forEach(button=>{
   button.setAttribute('aria-pressed','false');
@@ -650,7 +688,6 @@ function setListView(on){
   diagramArea.style.display=on?'none':'block';
   toggleList.textContent=on?'Diagram view':'List view';
   toggleList.setAttribute('aria-pressed',String(on));
-  document.querySelectorAll('[data-diagram-control]').forEach(el=>{el.hidden=on;});
 }
 toggleList.addEventListener('click',()=>setListView(!listView.classList.contains('active')));
 const tbody=document.getElementById('listBody');

@@ -88,10 +88,12 @@ test('Baptist origins distinguish General and Particular histories', () => {
   assert.match(byId.get('baptist').date, /1609.*1630s/);
 });
 
-test('All relationship types have a filter and the required scripts load in order', () => {
+test('All relationship types stay enabled and the required scripts load in order', () => {
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   for (const type of new Set(edges.map(item => item.type))) {
-    assert.ok(html.includes(`id="show${type[0].toUpperCase()}${type.slice(1)}"`), type);
+    assert.ok(!html.includes(`id="show${type[0].toUpperCase()}${type.slice(1)}"`), type);
   }
+  assert.doesNotMatch(script, /relationshipFilters|connection-muted/);
+  assert.doesNotMatch(html, /connection-options/);
   assert.ok(html.indexOf('src="history.js') < html.indexOf('src="script.js'));
 });
