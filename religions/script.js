@@ -333,8 +333,42 @@ function selectNode(id) {
   updateFilters();
   nodeInfo.scrollTop=0;
 }
-let scale=0.11, tx=20, ty=30;
+const viewPadding=16, maximumScale=2.2;
+function getFitScale(bounds,size){
+  return Math.min(maximumScale,Math.max(1,size.width-2*viewPadding)/bounds.width,
+    Math.max(1,size.height-2*viewPadding)/bounds.height);
+}
+function constrainView(view,bounds,size){
+  const scale=Math.min(maximumScale,Math.max(getFitScale(bounds,size),view.scale));
+  const constrainAxis=(offset,start,length,available)=>{
+    // Center an axis that fits. Otherwise, stop at either diagram edge.
+    if(length*scale<=available-2*viewPadding){
+      return (available-length*scale)/2-start*scale;
+    }
+    const minimum=available-viewPadding-(start+length)*scale;
+    const maximum=viewPadding-start*scale;
+    return Math.min(maximum,Math.max(minimum,offset));
+  };
+  return {scale,tx:constrainAxis(view.tx,bounds.x,bounds.width,size.width),
+    ty:constrainAxis(view.ty,bounds.y,bounds.height,size.height)};
+}
+let scale=1, tx=0, ty=0;
+let timelineBounds, previousViewSize;
+function viewSize(rect=svg.getBoundingClientRect()){
+  const panel=nodeInfo.getBoundingClientRect();
+  // On narrow screens, the details cover most of the width. Use the clear
+  // area above them so an end-of-timeline box can still be brought into view.
+  const covered=panel.height>0&&panel.width>=rect.width*.75?panel.height+16:0;
+  return {width:rect.width,height:Math.max(0,rect.height-covered)};
+}
+function boundedScale(value,size=svg.getBoundingClientRect()){
+  return Math.min(maximumScale,Math.max(getFitScale(timelineBounds,viewSize(size)),value));
+}
 function applyTransform(){
+  const size=viewSize();
+  if(!timelineBounds||!size.width||!size.height)return;
+  ({scale,tx,ty}=constrainView({scale,tx,ty},timelineBounds,size));
+  previousViewSize={width:size.width,height:size.height};
   viewport.setAttribute('transform',`translate(${tx} ${ty}) scale(${scale})`);
   const arrow=document.getElementById('arrow-selected');
   arrow.setAttribute('markerWidth',10/scale);
@@ -342,10 +376,11 @@ function applyTransform(){
   document.getElementById('zoomLevel').textContent=`${Math.round(scale*100)}%`;
 }
 function fitAll(){
-  const r=svg.getBoundingClientRect();
-  scale=Math.min(r.width/worldW,(r.height-10)/worldH)*0.96;
-  tx=(r.width-worldW*scale)/2;
-  ty=(r.height-worldH*scale)/2;
+  const r=viewSize();
+  if(!timelineBounds||!r.width||!r.height)return;
+  scale=getFitScale(timelineBounds,r);
+  tx=r.width/2-(timelineBounds.x+timelineBounds.width/2)*scale;
+  ty=r.height/2-(timelineBounds.y+timelineBounds.height/2)*scale;
   applyTransform();
 }
 function matchingNodes(){
@@ -357,7 +392,7 @@ function fitNodes(items, reserveDetails=false){
   if(!items.length||listView.classList.contains('active'))return;
   const r=svg.getBoundingClientRect();
   const width=r.width;
-  const height=Math.max(100,r.height-(reserveDetails?nodeInfo.getBoundingClientRect().height+24:0));
+  const height=Math.max(100,Math.min(viewSize(r).height,r.height-(reserveDetails?nodeInfo.getBoundingClientRect().height+24:0)));
   const minX=Math.min(...items.map(n=>xFor(n.year)-nodeW/2))-45;
   const maxX=Math.max(...items.map(n=>xFor(n.year)+nodeW/2))+45;
   const minY=Math.min(...items.map(yFor))-45;
@@ -421,7 +456,7 @@ svg.addEventListener('pointermove',e=>{
   if(activePointers.size===2){
     const rect=svg.getBoundingClientRect();
     const midpoint=pointerMidpoint();
-    scale=Math.min(2.2,Math.max(0.045,pinchStartScale*pointerDistance()/pinchStartDistance));
+    scale=boundedScale(pinchStartScale*pointerDistance()/pinchStartDistance,rect);
     tx=midpoint.x-rect.left-pinchWorldX*scale;
     ty=midpoint.y-rect.top-pinchWorldY*scale;
     applyTransform();
@@ -452,13 +487,13 @@ svg.addEventListener('wheel',e=>{
   const r=svg.getBoundingClientRect(), mx=e.clientX-r.left,my=e.clientY-r.top;
   const beforeX=(mx-tx)/scale,beforeY=(my-ty)/scale;
   const factor=Math.exp(-e.deltaY*0.0012);
-  const newScale=Math.min(2.2,Math.max(0.045,scale*factor));
+  const newScale=boundedScale(scale*factor,r);
   tx=mx-beforeX*newScale; ty=my-beforeY*newScale; scale=newScale; applyTransform();
 },{passive:false});
 function zoom(f){
   const r=svg.getBoundingClientRect(),mx=r.width/2,my=r.height/2;
   const bx=(mx-tx)/scale,by=(my-ty)/scale;
-  scale=Math.min(2.2,Math.max(0.045,scale*f));
+  scale=boundedScale(scale*f,r);
   tx=mx-bx*scale;ty=my-by*scale;applyTransform();
 }
 function updateFilters(){
@@ -572,14 +607,26 @@ nodes.slice().sort((a,b)=>a.year-b.year).forEach(n=>{
   tr.querySelector('button').addEventListener('click',()=>openNode(n.id));
   tbody.appendChild(tr);
 });
-renderGrid();renderEdges();renderNodes();updateFilters();
+renderGrid();renderEdges();renderNodes();
+// Include cards and curved links that extend past the time grid. Keep these
+// bounds stable when a selection or filter changes.
+timelineBounds=viewport.getBBox();
+updateFilters();
 requestAnimationFrame(fitAll);
-let previousWidth=svg.getBoundingClientRect().width;
-window.addEventListener('resize',()=>{
-  const width=svg.getBoundingClientRect().width;
-  if(!listView.classList.contains('active')&&Math.abs(width-previousWidth)>40){
-    if(selectedId)fitNodes([map.get(selectedId)],true);else fitNodes(matchingNodes());
-    previousWidth=width;
+function resizeView(){
+  const size=viewSize();
+  if(!size.width||!size.height)return;
+  if(previousViewSize&&size.width===previousViewSize.width&&size.height===previousViewSize.height)return;
+  if(!previousViewSize||Math.abs(scale-getFitScale(timelineBounds,previousViewSize))<0.000001){
+    fitAll();
+  }else{
+    // Keep the same center when zoomed in, then apply the new edge limits.
+    tx+=(size.width-previousViewSize.width)/2;
+    ty+=(size.height-previousViewSize.height)/2;
+    applyTransform();
   }
-});
+}
+const viewObserver=new ResizeObserver(resizeView);
+viewObserver.observe(svg);
+viewObserver.observe(nodeInfo);
 })();
