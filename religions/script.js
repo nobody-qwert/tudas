@@ -65,7 +65,7 @@ reviseEdge('protbible','rastafari',{source:'baptist',label:'Afro-Jamaican Christ
 
 const groups = ["Ancient & oral", "Iranian", "Jewish", "Christian", "Islamic", "Bábí & Bahá’í", "South Asian", "Chinese & East Asian", "Other / modern"];
 // Larger cards keep names readable across several centuries at once.
-const rowGap=108, nodeW=360, nodeH=84, groupGap=108;
+const rowGap=108, nodeW=480, nodeH=84, groupGap=108;
 const minYear=-3500, maxYear=2026, worldW=9200, left=180, right=120;
 const minimumYearGap=(nodeW+18)*(maxYear-minYear)/(worldW-left-right);
 const layoutRows=new Map();
@@ -98,6 +98,11 @@ const selectedEdgesOverlay = document.getElementById('selectedEdgesOverlay');
 const nodeInfo = document.getElementById('nodeInfo');
 const nodeInfoContent = document.getElementById('nodeInfoContent');
 const closeInfo = document.getElementById('closeInfo');
+const helpPanel = document.getElementById('helpPanel');
+const helpContent = document.getElementById('helpContent');
+const helpTitle = document.getElementById('helpTitle');
+const closeHelpButton = document.getElementById('closeHelp');
+let helpTrigger=null;
 const search = document.getElementById('search');
 const groupFilter = document.getElementById('groupFilter');
 const status = document.getElementById('status');
@@ -135,7 +140,10 @@ function edgePath(a,b,index) {
   const ac={x:xFor(a.year),y:yFor(a)+nodeH/2};
   const bc={x:xFor(b.year),y:yFor(b)+nodeH/2};
   const deltaX=bc.x-ac.x, deltaY=bc.y-ac.y;
-  const horizontal=Math.abs(deltaX)>=nodeW+8;
+  const facingGap=Math.abs(deltaX)-nodeW;
+  // Switch to the outer side when facing ports would make a near-vertical line.
+  const nearVertical=Math.abs(deltaY)>nodeH&&facingGap<Math.max(64,Math.min(nodeW*.5,Math.abs(deltaY)*.55));
+  const horizontal=facingGap>=8&&!nearVertical;
   const variation=((index%7)-3)*5;
 
   if(horizontal){
@@ -151,14 +159,23 @@ function edgePath(a,b,index) {
   const start={x:ac.x+side*nodeW/2,y:ac.y};
   const end={x:bc.x+side*nodeW/2,y:bc.y};
   const excursion=Math.max(48,Math.min(180,48+Math.abs(deltaY)*.18+Math.abs(variation)));
-  return `M${start.x},${start.y} C${start.x+side*excursion},${start.y} ${end.x+side*excursion},${end.y} ${end.x},${end.y}`;
+  const outerX=(side<0?Math.min(start.x,end.x):Math.max(start.x,end.x))+side*excursion;
+  return `M${start.x},${start.y} C${outerX},${start.y} ${outerX},${end.y} ${end.x},${end.y}`;
+}
+function isDirected(e){
+  return e.type==='lineage'||e.type==='text';
+}
+function connectionTitle(e){
+  const a=map.get(e.source),b=map.get(e.target);
+  const types={lineage:'Lineage',text:'Text relationship',influence:'Influence / shared context',event:'Event / context'};
+  return `${types[e.type]}: ${a.name}${isDirected(e)?' → ':' — '}${b.name}${e.label?' — '+e.label:''}`;
 }
 function renderEdges() {
   edges.forEach((e,i)=>{
     const a=map.get(e.source),b=map.get(e.target); if(!a||!b)return;
-    const marker=(e.type==='lineage'||e.type==='text')?`url(#arrow-${e.type})`:'none';
-    const p=addSVG('path',{d:edgePath(a,b,i),class:`edge ${e.type}`,'marker-end':marker,'data-type':e.type,'data-i':i},edgesG);
-    const title=addSVG('title',{},p); title.textContent=`${a.name} → ${b.name}${e.label?' — '+e.label:''}`;
+    const marker=isDirected(e)?`url(#arrow-${e.type})`:'none';
+    const p=addSVG('path',{d:edgePath(a,b,i),class:`edge ${e.type}`,'marker-end':marker,'data-type':e.type,'data-i':i,'data-source':e.source,'data-target':e.target},edgesG);
+    const title=addSVG('title',{},p); title.textContent=connectionTitle(e);
   });
 }
 function renderNodes() {
@@ -185,12 +202,6 @@ function fitLabel(element,label,width){
   while(end>0&&element.getComputedTextLength()>width);
 }
 let selectedId=null;
-function relationText(e,n) {
-  const other=map.get(e.source===n.id?e.target:e.source);
-  const dir=(e.type==='influence'||e.type==='event')?'~':(e.source===n.id?'→':'←');
-  const typ=e.type==='lineage'?'lineage':e.type==='influence'?'influence/context':e.type==='event'?'event/context':'text/canon';
-  return `<li><span class="badge">${typ}</span> ${dir} <button class="text-link" data-node-id="${esc(other.id)}">${esc(other.name)}</button>${e.label?' — '+esc(e.label):''}</li>`;
-}
 function renderSelectedEdgeOverlay(){
   selectedEdgesOverlay.replaceChildren();
   if(!selectedId)return;
@@ -201,18 +212,17 @@ function renderSelectedEdgeOverlay(){
     if(!original||original.classList.contains('hidden'))return;
     addSVG('path',{
       d:original.getAttribute('d'),
-      class:'selected-edge-glow',
+      class:`selected-edge-glow ${e.type}`,
       'data-i':i
     },selectedEdgesOverlay);
     const p=addSVG('path',{
       d:original.getAttribute('d'),
       class:`selected-edge-overlay ${e.type}`,
-      'marker-end':'none',
+      'marker-end':isDirected(e)?'url(#arrow-selected)':'none',
       'data-i':i
     },selectedEdgesOverlay);
-    const a=map.get(e.source),b=map.get(e.target);
     const title=addSVG('title',{},p);
-    title.textContent=`${a.name} → ${b.name}${e.label?' — '+e.label:''}`;
+    title.textContent=connectionTitle(e);
   });
 }
 function applySelectionFocus(){
@@ -254,26 +264,62 @@ function clearSelection(hideInfo=true){
   applySelectionFocus();
   if(hideInfo) nodeInfo.classList.add('hidden');
 }
+function closeHelp(restoreFocus=false){
+  if(helpPanel.hidden)return;
+  helpPanel.hidden=true;
+  helpTrigger?.setAttribute('aria-pressed','false');
+  if(selectedId)nodeInfo.classList.remove('hidden');
+  if(restoreFocus)helpTrigger?.focus({preventScroll:true});
+  helpTrigger=null;
+}
+function openHelp(button){
+  if(helpTrigger===button&&!helpPanel.hidden){closeHelp(true);return;}
+  closeHelp();
+  helpTrigger=button;
+  const titles={guide:'Connection guide',about:'About dates and connections',sources:'Reference sources'};
+  helpTitle.textContent=titles[button.dataset.help];
+  helpContent.replaceChildren(document.getElementById(`help-${button.dataset.help}`).content.cloneNode(true));
+  nodeInfo.classList.add('hidden');
+  helpPanel.hidden=false;
+  helpPanel.scrollTop=0;
+  button.setAttribute('aria-pressed','true');
+  closeHelpButton.focus({preventScroll:true});
+}
 function renderNodeInfo(n) {
-  const edgeEls=[...document.querySelectorAll('#edges .edge')];
-  const rel=edges.filter((e,i)=>(e.source===n.id||e.target===n.id)&&!edgeEls[i]?.classList.contains('hidden'));
+  const related=edges.filter(e=>e.source===n.id||e.target===n.id);
+  const visibleEdges=new Set([...edgesG.querySelectorAll('.edge:not(.hidden)')].map(el=>Number(el.dataset.i)));
+  const visible=edges.filter((e,i)=>visibleEdges.has(i)&&(e.source===n.id||e.target===n.id));
   nodeInfoContent.innerHTML=`<h2>${esc(n.name)}</h2>
-    <span class="badge">${esc(n.group)}</span><span class="badge">${esc(n.type)}</span>
-    <div class="detail-date"><strong>${esc(n.date)}</strong></div>
+    <p class="detail-date">${esc(n.date)}</p>
     <p class="detail-desc">${esc(n.desc)}</p>
-    <p class="selection-key"><span class="selected-key">Cyan: selected</span> · <span class="related-key">Gold: related</span></p>
-    <button type="button" data-fit-related>Show connected boxes</button>
-    <div class="relations"><strong>Related boxes (${rel.length} connections)</strong><ul>${rel.length?rel.map(e=>relationText(e,n)).join(''):'<li>No visible links under the current filters.</li>'}</ul></div>`;
+    <section class="relations" aria-label="Connections">
+      <h3>Connections (${visible.length})</h3>
+      ${visible.length?`<ul>${visible.map(e=>relationText(e,n)).join('')}</ul>`:`<p>${related.length?'Connections are hidden by the current filters.':'No connections are listed.'}</p>`}
+      ${visible.length&&visible.length<related.length?`<p class="relation-kind">${related.length-visible.length} hidden by filters.</p>`:''}
+    </section>`;
+}
+function relationText(e,n){
+  const outgoing=e.source===n.id;
+  const other=map.get(outgoing?e.target:e.source);
+  const labels={lineage:outgoing?'Lineage to':'Lineage from',text:outgoing?'Text link to':'Text link from',influence:'Influence / shared context',event:'Event / context'};
+  return `<li><span class="relation-kind">${labels[e.type]}</span>
+    <button class="text-link" type="button" data-node-id="${esc(other.id)}">${esc(other.name)}</button>
+    ${e.label?`<p class="relation-desc">${esc(e.label)}</p>`:''}</li>`;
 }
 function selectNode(id) {
   const n=map.get(id); if(!n)return;
+  closeHelp();
   selectedId=id;
   nodeInfo.classList.remove('hidden');
   updateFilters();
+  nodeInfo.scrollTop=0;
 }
 let scale=0.11, tx=20, ty=30;
 function applyTransform(){
   viewport.setAttribute('transform',`translate(${tx} ${ty}) scale(${scale})`);
+  const arrow=document.getElementById('arrow-selected');
+  arrow.setAttribute('markerWidth',10/scale);
+  arrow.setAttribute('markerHeight',8/scale);
   document.getElementById('zoomLevel').textContent=`${Math.round(scale*100)}%`;
 }
 function fitAll(){
@@ -291,9 +337,8 @@ function matchingNodes(){
 function fitNodes(items, reserveDetails=false){
   if(!items.length||listView.classList.contains('active'))return;
   const r=svg.getBoundingClientRect();
-  const mobile=window.matchMedia('(max-width:700px)').matches;
-  const width=Math.max(100,r.width-(reserveDetails&&!mobile?Math.min(444,r.width*.45):0));
-  const height=Math.max(100,reserveDetails&&mobile?r.height*.45:r.height);
+  const width=r.width;
+  const height=Math.max(100,r.height-(reserveDetails?nodeInfo.getBoundingClientRect().height+24:0));
   const minX=Math.min(...items.map(n=>xFor(n.year)-nodeW/2))-45;
   const maxX=Math.max(...items.map(n=>xFor(n.year)+nodeW/2))+45;
   const minY=Math.min(...items.map(yFor))-45;
@@ -304,6 +349,7 @@ function fitNodes(items, reserveDetails=false){
   applyTransform();
 }
 function resetView(){
+  closeHelp();
   search.value=''; groupFilter.value='all';
   [showLineage,showInfluence,showText,showEvent].forEach(el=>el.checked=true);
   clearSelection(); updateFilters();
@@ -378,7 +424,7 @@ function endPointer(e){
   } else if(activePointers.size===0){
     dragging=false; svg.classList.remove('dragging');
   }
-  if(clearOnTap){clearSelection();updateFilters();}
+  if(clearOnTap){closeHelp();clearSelection();updateFilters();}
 }
 svg.addEventListener('pointerup',endPointer);
 svg.addEventListener('pointercancel',endPointer);
@@ -463,6 +509,7 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
+    if(!helpPanel.hidden){e.preventDefault();closeHelp(true);return;}
     const hadSelection=selectedId;
     document.getElementById('searchResults').hidden=true;
     clearSelection();updateFilters();
@@ -475,6 +522,11 @@ document.getElementById('resetBtn').addEventListener('click',resetView);
 document.getElementById('zoomIn').addEventListener('click',()=>zoom(1.25));
 document.getElementById('zoomOut').addEventListener('click',()=>zoom(0.8));
 const listView=document.getElementById('listView'),diagramArea=document.getElementById('diagramArea'),toggleList=document.getElementById('toggleList');
+document.querySelectorAll('[data-help]').forEach(button=>{
+  button.setAttribute('aria-pressed','false');
+  button.addEventListener('click',()=>openHelp(button));
+});
+closeHelpButton.addEventListener('click',()=>closeHelp(true));
 closeInfo.addEventListener('click',()=>{
   const previous=selectedId;
   clearSelection(true);updateFilters();
@@ -483,13 +535,9 @@ closeInfo.addEventListener('click',()=>{
 nodeInfoContent.addEventListener('click',e=>{
   const related=e.target.closest('[data-node-id]');
   if(related)openNode(related.dataset.nodeId);
-  if(e.target.closest('[data-fit-related]')){
-    const ids=new Set([selectedId]);
-    document.querySelectorAll('.node.connection-neighbor').forEach(el=>ids.add(el.dataset.id));
-    fitNodes(nodes.filter(n=>ids.has(n.id)),true);
-  }
 });
 function setListView(on){
+  closeHelp();
   listView.classList.toggle('active',on);
   diagramArea.style.display=on?'none':'block';
   toggleList.textContent=on?'Diagram view':'List view';

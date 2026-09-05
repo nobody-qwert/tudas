@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Interactive Timeline & Family Tree of Religions and Sacred Texts</title>
-<link rel="stylesheet" href="styles.css?v=14">
+<link rel="stylesheet" href="styles.css?v=19">
 </head>
 <body>
 <header class="controls" aria-label="Timeline and diagram controls">
@@ -41,13 +41,14 @@
   <span id="status" class="status" aria-live="polite"></span>
 </header>
 
+<main class="workspace">
 <div id="diagramArea" class="main">
   <div id="stageWrap">
     <svg id="stage" role="group" aria-label="Interactive time tree of religions and sacred texts">
       <defs>
-        <marker id="arrow-lineage" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#e7e9ee"/></marker>
-        <marker id="arrow-influence" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#d0a85c"/></marker>
-        <marker id="arrow-text" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#6fb0dc"/></marker>
+        <marker id="arrow-lineage" markerWidth="7" markerHeight="7" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#e7e9ee"/></marker>
+        <marker id="arrow-text" markerWidth="7" markerHeight="7" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#6fb0dc"/></marker>
+        <marker id="arrow-selected" viewBox="0 0 10 8" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="8" refX="10" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 Z" fill="#67e8f9"/></marker>
       </defs>
       <g id="viewport">
         <g id="grid"></g>
@@ -56,20 +57,9 @@
         <g id="selectedEdgesOverlay" aria-hidden="true"></g>
       </g>
     </svg>
-    <details class="legend">
-      <summary>Connection guide</summary>
-      <div class="legrow"><span class="sample lineage"></span> descent / institutional split</div>
-      <div class="legrow"><span class="sample influence"></span> influence / shared milieu (not descent)</div>
-      <div class="legrow"><span class="sample text"></span> scripture / textual relationship</div>
-      <div class="legrow"><span class="sample event"></span> council / historical event context</div>
-      <div class="node-types"><span class="selected-key">Cyan: selected</span> · <span class="related-key">Gold: related</span></div>
-    </details>
-    <div class="hint">Drag to move · pinch or scroll to zoom</div>
       <div id="nodeInfo" class="hidden" aria-live="polite">
       <button id="closeInfo" class="close" type="button" aria-label="Close details">×</button>
-      <div id="nodeInfoContent" class="infoIntro">
-        <strong>Tip:</strong> click any node to see its date, context and immediate relationships. Use drag to pan and the mouse wheel to zoom.
-      </div>
+      <div id="nodeInfoContent"></div>
     </div>
   </div>
 </div>
@@ -82,14 +72,37 @@
   </table>
 </div>
 
-<div class="note">
-  <strong>Scope note.</strong> Connections were reviewed to avoid several common overstatements: dashed influence lines are not parent-child claims, council/event links are not institutional descent, the Church of the East is not drawn as a branch of Chalcedon, Oriental Orthodoxy is not drawn as descending from Chalcedonian Christianity, and debated Indus→Vedic or Zoroastrian→Yazidi direct-descent arrows are omitted. The Bábí and Bahá’í religions have their own branch because their historical roots in a Shiʿi environment do not make them Islamic denominations. This is intentionally broad rather than exhaustive. Many indigenous and oral religions have no recoverable “start date.”
-  Labels such as “Hinduism,” “Gnosticism,” “Judaism,” “Christianity,” “Daoism,” and “Shintō” each cover internally diverse histories.
-  The time coordinate therefore represents a useful historical marker (earliest evidence, formative period, major institutional split, or text date) rather than a claim that a complete religion suddenly appeared in one year.
-</div>
+<section id="helpPanel" role="dialog" aria-labelledby="helpTitle" hidden>
+  <button id="closeHelp" class="close" type="button" aria-label="Close information">×</button>
+  <h2 id="helpTitle"></h2>
+  <div id="helpContent"></div>
+</section>
+</main>
 
-<details class="sources">
-  <summary>Selected reference sources used to anchor disputed or easily-misstated dates</summary>
+<footer class="bottom-bar" aria-label="Timeline information">
+  <button type="button" data-help="guide" aria-controls="helpPanel" aria-haspopup="dialog">Connection guide</button>
+  <button type="button" data-help="about" aria-controls="helpPanel" aria-haspopup="dialog">About dates</button>
+  <button type="button" data-help="sources" aria-controls="helpPanel" aria-haspopup="dialog">Sources</button>
+  <span class="bottom-hint">Drag to move · pinch or scroll to zoom</span>
+</footer>
+
+<template id="help-guide">
+  <div class="legrow"><span class="sample lineage"></span> descent / institutional split</div>
+  <div class="legrow"><span class="sample influence"></span> influence / shared milieu (not descent)</div>
+  <div class="legrow"><span class="sample text"></span> scripture / textual relationship</div>
+  <div class="legrow"><span class="sample event"></span> council / historical event context</div>
+  <p><span class="selected-key">Cyan: selected</span> · <span class="related-key">Gold: related</span></p>
+  <p>Arrowheads mark the receiving box. Influence and event/context lines have no arrows. Dates increase from left to right; curves can bend around nearby boxes.</p>
+  <p>Select a box to highlight its connections. Select an empty area to clear the selection.</p>
+</template>
+
+<template id="help-about">
+  <p>Connections were reviewed to avoid several common overstatements: dashed influence lines are not parent-child claims, council/event links are not institutional descent, the Church of the East is not drawn as a branch of Chalcedon, Oriental Orthodoxy is not drawn as descending from Chalcedonian Christianity, and debated Indus→Vedic or Zoroastrian→Yazidi direct-descent arrows are omitted. The Bábí and Bahá’í religions have their own branch because their historical roots in a Shiʿi environment do not make them Islamic denominations. This is intentionally broad rather than exhaustive. Many indigenous and oral religions have no recoverable “start date.”
+  Labels such as “Hinduism,” “Gnosticism,” “Judaism,” “Christianity,” “Daoism,” and “Shintō” each cover internally diverse histories.
+  The time coordinate therefore represents a useful historical marker (earliest evidence, formative period, major institutional split, or text date) rather than a claim that a complete religion suddenly appeared in one year.</p>
+</template>
+
+<template id="help-sources">
   <ul>
     
     <li><a href="https://assets.cambridge.org/97811070/33931/excerpt/9781107033931_excerpt.pdf" target="_blank" rel="noopener">Cambridge — Buddhism/Jainism within the śramaṇa milieu</a></li>
@@ -121,8 +134,8 @@
 <li><a href="https://www.jw.org/en/news/region/global/Ninety-Years-Embracing-the-Name-Jehovahs-Witnesses/" target="_blank" rel="noopener">Jehovah's Witnesses — history of the name</a></li>
   </ul>
   <p>For a fully academic version, individual nodes could be expanded with book/article citations and competing scholarly date ranges.</p>
-</details>
+</template>
 
-<script src="script.js?v=14"></script>
+<script src="script.js?v=20"></script>
 </body>
 </html>
